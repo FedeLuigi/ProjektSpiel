@@ -1,14 +1,16 @@
-// Haupteinstiegspunkt: Startet den Node.js-Server und verbindet alle Module
+// Haupteinstiegspunkt: Startet den Node.js-Server und verbindet alle Plattform-Module
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 
-// Module aus der bestehenden Projektstruktur einbinden
-const { PORT, TICK_RATE_MS, WELLEN_KONFIG } = require('./3_Spieleinstellungen/server_einstellungen');
+// Plattform-Konfiguration & Multiplayer-Dienste
+const { PORT, TICK_RATE_MS } = require('./3_Spieleinstellungen/server_einstellungen');
 const raumVerwaltung = require('./2_Multiplayer/raum_verwaltung');
-const wellenVerwaltung = require('./1_Spiel/wellen_verwaltung');
-const zombieVerwaltung = require('./1_Spiel/zombie_verwaltung');
+const spielManager = require('./2_Multiplayer/spiel_manager');
+
+// Registrierte Spiele laden (vollständig entkoppelt von der Plattform)
+spielManager.spielRegistrieren(require('./1_Spiel/zombie_server'));
 
 const app = express();
 const server = http.createServer(app);
@@ -19,14 +21,14 @@ app.get('/', (req, res) => res.redirect('/0_Spielbox/spielbox.html'));
 app.use(express.static(__dirname));
 
 // ==========================================
-// Socket.IO: Netzwerk-Ereignisse (Multiplayer-Lobby & Räume)
+// Socket.IO: Plattformweite Netzwerk-Ereignisse (Lobby & Räume)
 // ==========================================
 io.on('connection', (socket) => {
   console.log(`[Netzwerk] Client verbunden: ID ${socket.id}`);
 
   // 1. Raum erstellen
   socket.on('raumErstellen', (daten) => {
-    const raum = raumVerwaltung.raumErstellen(socket.id, daten?.spielerName);
+    const raum = raumVerwaltung.raumErstellen(socket.id, daten?.spielerName, daten?.spielId);
     socket.join(raum.code);
 
     socket.emit('raumErstellt', {
@@ -67,26 +69,14 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 4. Spielrunde starten (nur durch Raumleiter und wenn alle bereit sind)
+  // 4. Spielrunde starten (Raumleiter startet die Runde für das jeweilige Spiel)
   socket.on('rundeStarten', () => {
-    const ergebnis = raumVerwaltung.rundeStarten(socket.id);
+    const ergebnis = raumVerwaltung.rundeStarten(socket.id, io);
 
     if (ergebnis.fehler) {
       socket.emit('raumFehler', ergebnis.fehler);
       return;
     }
-
-    const raum = ergebnis.raum;
-
-    // Start-Signal an alle Spieler des Raums senden
-    io.to(raum.code).emit('spielGestartet', {
-      raumCode: raum.code,
-      spieler: raum.spieler,
-      welle: wellenVerwaltung.getZustand(raum)
-    });
-
-    // Level 1 im Raum starten
-    wellenVerwaltung.welleStarten(raum, 1, io);
   });
 
   // 5. Raum freiwillig verlassen (zurück zum Hauptmenü)
@@ -94,7 +84,7 @@ io.on('connection', (socket) => {
     const raum = raumVerwaltung.getRaumVonSocket(socket.id);
     if (raum) {
       socket.leave(raum.code);
-      const res = raumVerwaltung.spielerEntfernen(socket.id);
+      const res = raumVerwaltung.spielerEntfernen(socket.id, io);
 
       if (res && !res.raumGeloescht && res.raum) {
         if (res.neuerLeiter) {
@@ -121,7 +111,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 6. Spielerbewegung synchronisieren (nur innerhalb des jeweiligen Raums)
+  // 6. Allgemeine Spielerbewegung synchronisieren (innerhalb des jeweiligen Raums)
   socket.on('spielerBewegung', (daten) => {
     const raum = raumVerwaltung.getRaumVonSocket(socket.id);
     if (raum && raum.spieler[socket.id]) {
@@ -141,28 +131,13 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 7. Schuss abfeuern (nur innerhalb des jeweiligen Raums)
-  socket.on('schussAbfeuern', (daten) => {
-    const raum = raumVerwaltung.getRaumVonSocket(socket.id);
-    if (raum) {
-      socket.to(raum.code).emit('schussAbgefeuert', { ...daten, spielerId: socket.id });
-    }
-  });
+  // 7. Spielspezifische Socket-Events registrieren (z.B. Waffen & Treffer für Zombie Koop)
+  spielManager.registriereSocketEvents(socket, io, raumVerwaltung);
 
-  // 8. Zombie getroffen (Koop-Schaden innerhalb des Raums)
-  socket.on('zombieTreffer', (treffer) => {
-    const raum = raumVerwaltung.getRaumVonSocket(socket.id);
-    if (raum && raum.status === 'spiel') {
-      zombieVerwaltung.zombieTreffen(raum, treffer, socket.id, io, () => {
-        wellenVerwaltung.zombieBesiegt(raum, io);
-      });
-    }
-  });
-
-  // 9. Verbindung getrennt (Disconnect)
+  // 8. Verbindung getrennt (Disconnect)
   socket.on('disconnect', () => {
     console.log(`[Netzwerk] Client getrennt: ID ${socket.id}`);
-    const res = raumVerwaltung.spielerEntfernen(socket.id);
+    const res = raumVerwaltung.spielerEntfernen(socket.id, io);
 
     if (res && !res.raumGeloescht && res.raum) {
       if (res.neuerLeiter) {
@@ -178,7 +153,8 @@ io.on('connection', (socket) => {
 });
 
 // ==========================================
-// Zentraler Game Loop für alle aktiven Spielräume (25 Ticks pro Sekunde)
+// Zentraler Game Loop für alle aktiven Spielräume (z.B. 25 Ticks pro Sekunde)
+// Delegiert den Game-Tick an das jeweils aktive Spiel im Raum
 // ==========================================
 setInterval(() => {
   const alleRaeume = raumVerwaltung.getAlleRaeume();
@@ -190,28 +166,8 @@ setInterval(() => {
     // Nur Räume aktualisieren, in denen gerade gespielt wird
     if (raum.status !== 'spiel') continue;
 
-    // Pausen-Countdown zwischen Wellen aktualisieren
-    const z = raum.welle;
-    if (z.status === "pause" || z.status === "welle_geschafft") {
-      wellenVerwaltung.pauseAktualisieren(raum, io);
-      continue;
-    }
-
-    // Zombies spawnen, falls die Welle aktiv ist
-    if (
-      wellenVerwaltung.darfZombieSpawnen(raum) &&
-      jetzt - raum.letzterSpawnZeit > WELLEN_KONFIG.spawnIntervallMs
-    ) {
-      zombieVerwaltung.zombieSpawnen(raum, z.level);
-      wellenVerwaltung.zombieGespawntZaehlerErhoehen(raum);
-      raum.letzterSpawnZeit = jetzt;
-    }
-
-    // Zombie-KI berechnen und Spieler im Raum angreifen
-    zombieVerwaltung.zombiesAktualisieren(raum, io);
-
-    // Zombie-Positionen nur an diesen Raum senden
-    io.to(raum.code).emit('zombiesAktualisiert', zombieVerwaltung.getZombiesPaket(raum));
+    // Spielspezifischen Tick ausführen (z.B. Zombies, Wellen, Projektile)
+    spielManager.onTick(raum, jetzt, io);
   }
 }, TICK_RATE_MS);
 
@@ -221,7 +177,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🎮 SPIELBOX - Plattform & Multiplayer Server`);
   console.log(`🌐 Server läuft auf Port: ${PORT}`);
   console.log(`🕹️ SPIELBOX Startseite: http://localhost:${PORT}/`);
-  console.log(`🧟 Zombie Koop 2D: http://localhost:${PORT}/1_Spiel/spiel.html`);
   console.log(`👥 Raum-System & Lobby erfolgreich aktiviert.`);
+  console.log(`🎯 Registrierte Spiele: ${Object.keys(spielManager.getAlleSpiele()).join(', ')}`);
   console.log('=============================================');
 });

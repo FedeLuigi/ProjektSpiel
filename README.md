@@ -63,11 +63,14 @@ ProjektSpiel/
 │   ├── spiel.html                     # Spiel-Startseite & In-Game UI
 │   ├── design.css                     # Zombie-spezifische Stile & HUD
 │   ├── spiel.js                       # Zombie-Gameplay, Rendering & Steuerung
+│   ├── zombie_server.js               # Zombie-Serveradapter (Wellen, Zombies, Treffer)
 │   ├── wellen_verwaltung.js           # Zombie-Wellen & Level-Logik
-│   └── zombie_verwaltung.js           # Zombie-KI, Treffer, Spawnpunkte
+│   ├── zombie_verwaltung.js           # Zombie-KI, Treffer, Spawnpunkte
+│   └── service-worker.js              # Lokaler Service-Worker Fallback
 │
 ├── 2_Multiplayer/                     # Netzwerk & Mehrspieler-Räume
-│   ├── raum_verwaltung.js             # Raum-Erstellung, Codes, Beitritt & Lobby
+│   ├── raum_verwaltung.js             # Raum-Erstellung, Codes, Beitritt & Lobby (spiel-agnostisch)
+│   ├── spiel_manager.js               # Zentrale Registrierungsschnittstelle für Spiele
 │   ├── spieler_verwaltung.js          # Spielerverwaltung & Farbzuweisung
 │   └── verbindung.js                  # Client Socket.IO Anbindung
 │

@@ -37,12 +37,14 @@ ProjektSpiel/
 │   ├── spiel.html                     # Spiel-Startseite & In-Game UI
 │   ├── design.css                     # Zombie-spezifische Stile & HUD
 │   ├── spiel.js                       # Zombie-Gameplay, Rendering & Steuerung
+│   ├── zombie_server.js               # Zombie-Serveradapter (Wellen, Zombies, Treffer)
 │   ├── wellen_verwaltung.js           # Zombie-Wellen & Level-Logik
 │   ├── zombie_verwaltung.js           # Zombie-KI, Treffer, Spawnpunkte
 │   └── service-worker.js              # Lokaler Service-Worker Fallback
 │
 ├── 2_Multiplayer/                     # Netzwerk & Mehrspieler-Räume
-│   ├── raum_verwaltung.js             # Raum-Erstellung, Codes, Beitritt & Lobby
+│   ├── raum_verwaltung.js             # Raum-Erstellung, Codes, Beitritt & Lobby (spiel-agnostisch)
+│   ├── spiel_manager.js               # Zentrale Registrierungsschnittstelle für Spiele
 │   ├── spieler_verwaltung.js          # Spielerverwaltung & Farbzuweisung
 │   └── verbindung.js                  # Client Socket.IO Anbindung
 │
@@ -120,5 +122,27 @@ Fertig! Das Spiel erscheint automatisch im SPIELBOX-Startbildschirm und kann sof
 - `PlattformSpeicher.getAudioEinstellungen()`: Liest Master-Lautstärke, Sound- und Musik-Präferenzen aus.
 
 ### `PwaDienst` (`0_Spielbox/dienste/pwa_dienst.js`)
+- Verwaltet die Installation als Progressive Web App (iOS & Android).
+
+### `QuerformatDienst` (`0_Spielbox/dienste/querformat_dienst.js`)
+- Erzwingt und sichert die automatische Querformat-Ausrichtung bei Aufruf der Seite.
+
+---
+
+## 5. Entkoppelte Multiplayer-Serverarchitektur (`SpielManager`)
+
+Die SPIELBOX trennt die allgemeine Server- und Raumverwaltung vollständig von der spielspezifischen Spiellogik:
+
+- **Plattformserver (`server_starten.js`)**: Verwaltet Express, HTTP, statische Dateien und allgemeine Socket.IO-Ereignisse (Raumerstellung, Beitritt, Bereitschaft, Disconnect).
+- **Raumverwaltung (`2_Multiplayer/raum_verwaltung.js`)**: Verwaltet 5-stellige Raumcodes, Raumleiter, Spielerlisten und Lobbys vollkommen spiel-agnostisch.
+- **SpielManager (`2_Multiplayer/spiel_manager.js`)**: Zentrale Registrierungsschnittstelle für Spielmodule.
+- **Spiele-Servermodul (`1_Spiel/zombie_server.js`)**: Registriert sich mit Standard-Lifecycle-Hooks:
+  - `initialisiereRaum(raum)`: Initialisiert spielspezifischen Raumzustand.
+  - `onRundeStarten(raum, io)`: Startet die Spielrunde (z.B. Wellen, Level).
+  - `registriereSocketEvents(socket, io, raumVerwaltung)`: Registriert spielspezifische Aktionen (z.B. Waffen, Schüsse).
+  - `onTick(raum, jetzt, io)`: Führt den regelmäßigen Gameloop-Tick aus (z.B. KI, Projektile).
+  - `onSpielerVerlassen(raum, socketId, io)`: Spielspezifische Aufräumarbeiten.
+
+Neue Spiele können einfach mit `spielManager.spielRegistrieren(meinSpielServer)` registriert werden, ohne dass `server_starten.js` oder `raum_verwaltung.js` angepasst werden müssen.
 - Initialisiert den plattformweiten Service-Worker.
 - Verwaltet die Standalone-App-Installation auf iOS (Safari Home-Screen) und Android (Install Prompt).

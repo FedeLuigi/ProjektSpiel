@@ -1,7 +1,7 @@
 // Raum-Verwaltung auf dem Server (Multiplayer-Lobby & Raum-Isolierung)
+// Vollständig spiel-agnostisch: delegiert spielspezifische Logik an den spielManager
 const { SPIELER_FARBEN } = require('../3_Spieleinstellungen/server_einstellungen');
-const wellenVerwaltung = require('../1_Spiel/wellen_verwaltung');
-const zombieVerwaltung = require('../1_Spiel/zombie_verwaltung');
+const spielManager = require('./spiel_manager');
 
 // Zeichen für leicht lesbare Raumcodes (ohne leicht verwechselbare Zeichen wie 0/O, 1/I)
 const CODE_ZEICHEN = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -23,7 +23,7 @@ function raumCodeGenerieren() {
 }
 
 // Erstellt einen neuen Raum mit dem Ersteller als Raumleiter
-function raumErstellen(socketId, spielerName) {
+function raumErstellen(socketId, spielerName, spielId = 'zombie') {
   // Falls der Spieler bereits in einem Raum ist, dort zuerst austragen
   spielerEntfernen(socketId);
 
@@ -46,24 +46,26 @@ function raumErstellen(socketId, spielerName) {
     blickrichtung: 'rechts'
   };
 
+  const gewaehltesSpiel = spielId || spielManager.getStandardSpielId();
+
   const neuerRaum = {
     code: code,
+    spielId: gewaehltesSpiel,
     leiterId: socketId,
     status: 'lobby', // 'lobby' | 'spiel'
     spieler: {
       [socketId]: ersteller
     },
-    zombies: {},
-    naechsteZombieId: 1,
-    welle: wellenVerwaltung.neuenWellenZustand(),
-    letzterSpawnZeit: 0,
     erstelltAm: Date.now()
   };
+
+  // Spielspezifischen Zustand initialisieren
+  spielManager.initialisiereRaum(neuerRaum, gewaehltesSpiel);
 
   raeume[code] = neuerRaum;
   socketZuRaum[socketId] = code;
 
-  console.log(`[Raum] Neuer Raum erstellt: ${code} von ${bereinigterName} (${socketId})`);
+  console.log(`[Raum] Neuer Raum erstellt: ${code} von ${bereinigterName} (${socketId}) [Spiel: ${gewaehltesSpiel}]`);
   return neuerRaum;
 }
 
@@ -144,7 +146,7 @@ function sindAlleSpielerBereit(raum) {
 }
 
 // Startet die Runde, wenn der Anforderer der Leiter ist und alle bereit sind
-function rundeStarten(socketId) {
+function rundeStarten(socketId, io) {
   const raum = getRaumVonSocket(socketId);
   if (!raum) {
     return { fehler: 'Raum nicht gefunden.' };
@@ -159,17 +161,16 @@ function rundeStarten(socketId) {
   }
 
   raum.status = 'spiel';
-  raum.zombies = {};
-  raum.naechsteZombieId = 1;
-  raum.welle = wellenVerwaltung.neuenWellenZustand();
-  raum.letzterSpawnZeit = 0;
 
-  console.log(`[Raum ${raum.code}] Runde erfolgreich gestartet!`);
+  // Spielspezifische Rundenstart-Logik delegieren
+  spielManager.onRundeStarten(raum, io);
+
+  console.log(`[Raum ${raum.code}] Runde erfolgreich gestartet! (Spiel: ${raum.spielId})`);
   return { raum };
 }
 
 // Entfernt einen Spieler aus seinem Raum und kümmert sich um Leiter-Übergabe & Aufräumen
-function spielerEntfernen(socketId) {
+function spielerEntfernen(socketId, io) {
   const raumCode = socketZuRaum[socketId];
   if (!raumCode) return null;
 
@@ -179,6 +180,9 @@ function spielerEntfernen(socketId) {
 
   const entfernterSpieler = raum.spieler[socketId];
   delete raum.spieler[socketId];
+
+  // Spielspezifisches Cleanup informieren
+  spielManager.onSpielerVerlassen(raum, socketId, io);
 
   const verbleibendeSpieler = Object.values(raum.spieler);
 
@@ -231,6 +235,7 @@ function getLobbyPaket(raum) {
 
   return {
     raumCode: raum.code,
+    spielId: raum.spielId || 'zombie',
     leiterId: raum.leiterId,
     status: raum.status,
     spielerAnzahl: spielerListe.length,
