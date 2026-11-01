@@ -6,6 +6,10 @@
   "scope": "/",
   "id": "/0_Spielbox/spielbox.html",
   "display": "standalone",
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
   "orientation": "landscape",
   "background_color": "#070a12",
   "theme_color": "#070a12",

@@ -1877,3 +1877,127 @@ kbd {
   gap: 10px;
   justify-content: flex-end;
 }
+
+/* ========================================================
+   QUERFORMAT-DREH-OVERLAY (Automatische Querformat-Führung)
+   ======================================================== */
+.querformat-dreh-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(7, 10, 18, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  pointer-events: auto !important;
+}
+
+.querformat-dreh-overlay.versteckt {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none !important;
+}
+
+/* Auf Desktop oder im Querformat IMMER unsichtbar */
+@media (min-width: 1025px) {
+  .querformat-dreh-overlay {
+    display: none !important;
+  }
+}
+
+@media (orientation: landscape) {
+  .querformat-dreh-overlay {
+    display: none !important;
+  }
+}
+
+.querformat-dreh-inhalt {
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.dreh-icon-kasten {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.dreh-smartphone-icon {
+  font-size: 3.5rem;
+  display: inline-block;
+  animation: smartphoneDrehen 2.4s ease-in-out infinite;
+}
+
+.dreh-pfeil-icon {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 1.6rem;
+  animation: pfeilDrehen 2.4s linear infinite;
+}
+
+@keyframes smartphoneDrehen {
+  0%, 15% {
+    transform: rotate(0deg);
+  }
+  50%, 80% {
+    transform: rotate(-90deg);
+  }
+  95%, 100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes pfeilDrehen {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dreh-titel {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.dreh-text {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.dreh-action-btn {
+  margin-top: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #070a12;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 13px 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  transition: all 0.2s ease;
+  width: 100%;
+  max-width: 280px;
+}
+
+.dreh-action-btn:hover,
+.dreh-action-btn:active {
+  background: #34d399;
+  transform: scale(1.02);
+}

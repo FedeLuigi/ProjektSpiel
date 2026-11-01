@@ -171,13 +171,17 @@ function zufallsNameGenerieren() {
   return `${name}_${nr}`;
 }
 
-// Automatische Querformat-Aktivierung (Landscape) ohne störende Drehhinweise
+// Automatische Querformat-Aktivierung (Landscape) über zentralen QuerformatDienst
 function querformatAktivieren() {
-  try {
-    if (screen.orientation && typeof screen.orientation.lock === "function") {
-      screen.orientation.lock("landscape").catch(() => {});
-    }
-  } catch (e) {}
+  if (typeof QuerformatDienst !== "undefined" && typeof QuerformatDienst.querformatAktivieren === "function") {
+    QuerformatDienst.querformatAktivieren(true);
+  } else {
+    try {
+      if (screen.orientation && typeof screen.orientation.lock === "function") {
+        screen.orientation.lock("landscape").catch(() => {});
+      }
+    } catch (e) {}
+  }
 }
 
 function toastZeigen(text, dauerMs = 2600) {

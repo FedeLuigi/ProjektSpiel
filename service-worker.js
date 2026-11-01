@@ -2,7 +2,7 @@
 // Ermöglicht Offline-Start, App-Installation und Caching aller Plattform- und Spiel-Ressourcen
 // WICHTIG: Socket.IO und Multiplayer-Verbindungen werden NIEMALS abgefangen oder gecacht!
 
-const CACHE_NAME = 'spielbox-plattform-v1';
+const CACHE_NAME = 'spielbox-plattform-v2';
 
 const STATISCHE_DATEIEN = [
   '/',
@@ -12,6 +12,7 @@ const STATISCHE_DATEIEN = [
   '/0_Spielbox/spielbox.css',
   '/0_Spielbox/spielbox.js',
   '/0_Spielbox/spiele_katalog.js',
+  '/0_Spielbox/dienste/querformat_dienst.js',
   '/0_Spielbox/dienste/plattform_speicher.js',
   '/0_Spielbox/dienste/pwa_dienst.js',
   '/0_Spielbox/grafiken/icon-192.png',

@@ -12,6 +12,12 @@
   <meta name="theme-color" content="#070a12">
   <meta name="format-detection" content="telephone=no">
 
+  <!-- Automatisches Querformat für Android, Webviews & Mobile Browser -->
+  <meta name="screen-orientation" content="landscape">
+  <meta name="x5-orientation" content="landscape">
+  <meta name="x5-fullscreen" content="true">
+  <meta name="x5-page-mode" content="app">
+
   <!-- Favicons und PWA Icons -->
   <link rel="icon" type="image/svg+xml" href="/0_Spielbox/grafiken/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/0_Spielbox/grafiken/favicon.png">
@@ -209,6 +215,7 @@
   </div>
 
   <!-- Plattform-Skripte -->
+  <script src="/0_Spielbox/dienste/querformat_dienst.js"></script>
   <script src="/0_Spielbox/dienste/plattform_speicher.js"></script>
   <script src="/0_Spielbox/dienste/pwa_dienst.js"></script>
   <script src="/0_Spielbox/spiele_katalog.js"></script>
