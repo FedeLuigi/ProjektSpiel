@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProjektSpiel - 2D Spielwelt</title>
+  <link rel="stylesheet" href="design.css">
+</head>
+<body>
+
+  <div class="spiel-container">
+    <!-- Kopfbereich -->
+    <header class="spiel-header">
+      <div class="titel-bereich">
+        <h1>🎮 ProjektSpiel</h1>
+        <p class="untertitel">2D-Spielfeld mit Socket.IO Vorbereitung</p>
+      </div>
+      <div class="status-bereich" id="multiplayer-status">
+        <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
+        <span class="status-text" id="multiplayer-status-text">Verbinde...</span>
+      </div>
+    </header>
+
+    <!-- Das 2D Spielfeld (Canvas) -->
+    <main class="spielfeld-bereich">
+      <canvas id="spielFeld"></canvas>
+    </main>
+
+    <!-- Fußbereich mit Steuerungshinweisen und Positionsanzeige -->
+    <footer class="spiel-footer">
+      <div class="tasten-info">
+        <span class="tasten-label">Steuerung:</span>
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> oder <kbd>▲</kbd><kbd>◄</kbd><kbd>▼</kbd><kbd>►</kbd>
+      </div>
+      <div class="position-info">
+        Position: <span id="spieler-pos">X: 0 | Y: 0</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Socket.IO Client vom Server geladen -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Module des Spiels -->
+  <script src="../3_Spieleinstellungen/einstellungen.js"></script>
+  <script src="../2_Multiplayer/verbindung.js"></script>
+  <script src="spiel.js"></script>
+</body>
+</html>
