@@ -16,6 +16,10 @@ class MultiplayerVerbindung {
     this.onZombieVerletzt = callbacks.onZombieVerletzt || null;
     this.onSpielerSchaden = callbacks.onSpielerSchaden || null;
     this.onSpielerRespawn = callbacks.onSpielerRespawn || null;
+    this.onWelleStatus = callbacks.onWelleStatus || null;
+    this.onWelleGestartet = callbacks.onWelleGestartet || null;
+    this.onWelleAbgeschlossen = callbacks.onWelleAbgeschlossen || null;
+    this.onPauseCountdown = callbacks.onPauseCountdown || null;
 
     this.initialisieren();
   }
@@ -122,6 +126,31 @@ class MultiplayerVerbindung {
       this.socket.on("spielerRespawn", (daten) => {
         if (typeof this.onSpielerRespawn === "function") {
           this.onSpielerRespawn(daten);
+        }
+      });
+
+      // 9. Wellen- & Levelsystem
+      this.socket.on("welleStatus", (daten) => {
+        if (typeof this.onWelleStatus === "function") {
+          this.onWelleStatus(daten);
+        }
+      });
+
+      this.socket.on("welleGestartet", (daten) => {
+        if (typeof this.onWelleGestartet === "function") {
+          this.onWelleGestartet(daten);
+        }
+      });
+
+      this.socket.on("welleAbgeschlossen", (daten) => {
+        if (typeof this.onWelleAbgeschlossen === "function") {
+          this.onWelleAbgeschlossen(daten);
+        }
+      });
+
+      this.socket.on("pauseCountdown", (daten) => {
+        if (typeof this.onPauseCountdown === "function") {
+          this.onPauseCountdown(daten);
         }
       });
 

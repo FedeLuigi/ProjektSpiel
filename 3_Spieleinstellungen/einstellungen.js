@@ -36,6 +36,14 @@ const Spieleinstellungen = {
     maxReichweite: 800        // Maximale Flugdistanz der Kugel
   },
 
+  // Einstellungen für das Wellen- und Levelsystem
+  wellen: {
+    pauseDauerSekunden: 5,   // Atemholen zwischen den Wellen
+    basisZombies: 8,         // Zombies in Level 1
+    zombiesProLevel: 5,      // Zusätzliche Zombies pro weiterem Level
+    heilungNachWelle: 25     // Heilung nach überstandener Welle
+  },
+
   // Einstellungen für die virtuelle Touch-Steuerung (Smartphones)
   touch: {
     joystickRadius: 55,       // Äußerer Ring

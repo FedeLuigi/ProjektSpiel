@@ -7,6 +7,11 @@ let positionsAnzeige = null;
 let lebenFuellung = null;
 let lebenText = null;
 let zombieAnzeige = null;
+let levelAnzeige = null;
+let welleBanner = null;
+let welleBannerTitel = null;
+let welleBannerUntertitel = null;
+let bannerTimeout = null;
 
 // Sound-System (Web Audio API - ohne externe Dateien)
 let audioKontext = null;
@@ -84,6 +89,10 @@ function spielStarten() {
   lebenFuellung = document.getElementById("spieler-leben-fuellung");
   lebenText = document.getElementById("spieler-leben-text");
   zombieAnzeige = document.getElementById("zombie-anzahl");
+  levelAnzeige = document.getElementById("level-anzeige");
+  welleBanner = document.getElementById("welle-banner");
+  welleBannerTitel = document.getElementById("welle-banner-titel");
+  welleBannerUntertitel = document.getElementById("welle-banner-untertitel");
 
   // Vollbild initialisieren
   bildschirmGroesseAnpassen();
@@ -156,6 +165,42 @@ function spielStarten() {
         spieler.x = daten.x;
         spieler.y = daten.y;
         lebenAktualisieren(spieler.hp);
+      }
+    },
+
+    // 9. Wellen- & Levelsystem Events
+    onWelleStatus: (daten) => {
+      if (levelAnzeige) {
+        levelAnzeige.textContent = `🏆 Level ${daten.level}`;
+      }
+      if (zombieAnzeige) {
+        if (daten.status === "welle_aktiv") {
+          zombieAnzeige.textContent = `🧟 ${daten.zombiesUebrig} übrig`;
+        } else {
+          zombieAnzeige.textContent = `⏳ Pause (${daten.pauseVerbleibend}s)`;
+        }
+      }
+    },
+
+    onWelleGestartet: (daten) => {
+      if (levelAnzeige) {
+        levelAnzeige.textContent = `🏆 Level ${daten.level}`;
+      }
+      bannerZeigen(`⚠️ LEVEL ${daten.level} STARTET!`, `${daten.zombiesGesamt} Zombies greifen an! Eliminiert alle!`);
+      soundEffektWelleStart();
+    },
+
+    onWelleAbgeschlossen: (daten) => {
+      bannerZeigen(`🏆 LEVEL ${daten.geschafftesLevel} GEMEISTERT!`, `+25 HP geheilt! Level ${daten.naechstesLevel} startet in ${daten.pauseSekunden}s...`, 4800);
+      soundEffektLevelGeschafft();
+    },
+
+    onPauseCountdown: (daten) => {
+      if (zombieAnzeige) {
+        zombieAnzeige.textContent = `⏳ Pause (${daten.sekunden}s)`;
+      }
+      if (welleBanner && !welleBanner.classList.contains("versteckt")) {
+        welleBannerUntertitel.textContent = `Level ${daten.naechstesLevel} startet in ${daten.sekunden} Sekunden...`;
       }
     }
   });
@@ -235,6 +280,59 @@ function soundEffektTreffer() {
     osc.start(jetzt);
     osc.stop(jetzt + 0.1);
   } catch (e) {}
+}
+
+// Sieges-Melodie bei gemeistertem Level
+function soundEffektLevelGeschafft() {
+  if (!audioKontext) return;
+  try {
+    const jetzt = audioKontext.currentTime;
+    const toene = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Sieg-Fanfare)
+    toene.forEach((f, idx) => {
+      const osc = audioKontext.createOscillator();
+      const gain = audioKontext.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(f, jetzt + idx * 0.12);
+      gain.gain.setValueAtTime(0.2, jetzt + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.01, jetzt + idx * 0.12 + 0.35);
+      osc.connect(gain);
+      gain.connect(audioKontext.destination);
+      osc.start(jetzt + idx * 0.12);
+      osc.stop(jetzt + idx * 0.12 + 0.35);
+    });
+  } catch (e) {}
+}
+
+// Bedrohliches Signalhorn beim Start einer neuen Welle
+function soundEffektWelleStart() {
+  if (!audioKontext) return;
+  try {
+    const jetzt = audioKontext.currentTime;
+    const osc = audioKontext.createOscillator();
+    const gain = audioKontext.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(140, jetzt);
+    osc.frequency.linearRampToValueAtTime(95, jetzt + 0.4);
+    gain.gain.setValueAtTime(0.22, jetzt);
+    gain.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.45);
+    osc.connect(gain);
+    gain.connect(audioKontext.destination);
+    osc.start(jetzt);
+    osc.stop(jetzt + 0.45);
+  } catch (e) {}
+}
+
+// Zeigt das große Level-Banner auf dem Bildschirm
+function bannerZeigen(titel, untertitel, dauerMs = 3500) {
+  if (!welleBanner || !welleBannerTitel || !welleBannerUntertitel) return;
+  welleBannerTitel.textContent = titel;
+  welleBannerUntertitel.textContent = untertitel;
+  welleBanner.classList.remove("versteckt");
+
+  if (bannerTimeout) clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => {
+    welleBanner.classList.add("versteckt");
+  }, dauerMs);
 }
 
 // 4. Eingabe-Registrierung

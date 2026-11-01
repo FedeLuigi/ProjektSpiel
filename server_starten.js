@@ -1,4 +1,4 @@
-// Server für das öffentliche 2D-Zombie-Koop-Spiel mit Express und Socket.IO
+// Server für das öffentliche 2D-Zombie-Koop-Spiel mit Wellen- und Levelsystem
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -7,7 +7,7 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
-// Socket.IO für Echtzeit-Kommunikation und Online-Hosting konfigurieren
+// Socket.IO für Echtzeit-Kommunikation und Online-Hosting
 const io = new Server(server, {
   cors: {
     origin: "*",
@@ -15,10 +15,9 @@ const io = new Server(server, {
   }
 });
 
-// Port für lokales Spielen oder Cloud-Hosting (Render, Heroku, Railway etc.)
 const PORT = process.env.PORT || 3000;
 
-// Farbpalette für automatische Spieler-Zuweisung
+// Farbpalette für Spieler
 const SPIELER_FARBEN = [
   "#3b82f6", // Blau
   "#10b981", // Grün
@@ -30,72 +29,133 @@ const SPIELER_FARBEN = [
   "#f97316"  // Orange
 ];
 
-// Zentrale Listen für Spieler und Zombies (im Server-Speicher)
+// Zentrale Datenstrukturen
 const alleSpieler = {};
 const alleZombies = {};
 let naechsteZombieId = 1;
-
-// Maximale Zombies für Schritt 4
-const MAX_ZOMBIES = 10;
 let letzterSpawnZeit = 0;
+
+// ==========================================
+// Wellen- und Levelsystem (Koop-Fortschritt)
+// ==========================================
+const spielZustand = {
+  level: 1,
+  status: "pause", // "pause", "welle_aktiv", "welle_geschafft"
+  zombiesGesamt: 8,
+  zombiesGespawnt: 0,
+  zombiesUebrig: 8,
+  pauseVerbleibend: 5,
+  letzterPauseTick: Date.now()
+};
+
+function welleStatusSenden() {
+  io.emit('welleStatus', {
+    level: spielZustand.level,
+    status: spielZustand.status,
+    zombiesUebrig: spielZustand.zombiesUebrig,
+    zombiesGesamt: spielZustand.zombiesGesamt,
+    pauseVerbleibend: spielZustand.pauseVerbleibend
+  });
+}
+
+function welleStarten(levelNummer) {
+  spielZustand.level = levelNummer;
+  spielZustand.status = "welle_aktiv";
+  // Mehr Zombies pro Level (Level 1: 8, Level 2: 13, Level 3: 18 usw.)
+  spielZustand.zombiesGesamt = 8 + (levelNummer - 1) * 5;
+  spielZustand.zombiesGespawnt = 0;
+  spielZustand.zombiesUebrig = spielZustand.zombiesGesamt;
+
+  console.log(`[Welle] Level ${levelNummer} gestartet mit ${spielZustand.zombiesGesamt} Zombies!`);
+
+  io.emit('welleGestartet', {
+    level: spielZustand.level,
+    zombiesGesamt: spielZustand.zombiesGesamt
+  });
+
+  welleStatusSenden();
+}
+
+function welleAbschliessen() {
+  spielZustand.status = "welle_geschafft";
+  spielZustand.pauseVerbleibend = 5;
+
+  console.log(`[Welle] Level ${spielZustand.level} erfolgreich gemeistert!`);
+
+  // Alle überlebenden Spieler belohnen (25 HP Heilung)
+  for (const sId in alleSpieler) {
+    const p = alleSpieler[sId];
+    if (p.hp > 0) {
+      p.hp = Math.min(100, p.hp + 25);
+      io.emit('spielerSchaden', { spielerId: p.id, hp: p.hp, schaden: -25 });
+    }
+  }
+
+  io.emit('welleAbgeschlossen', {
+    geschafftesLevel: spielZustand.level,
+    naechstesLevel: spielZustand.level + 1,
+    pauseSekunden: 5
+  });
+
+  welleStatusSenden();
+}
 
 // Statische Dateien ausliefern
 app.use(express.static(__dirname));
 
-// Öffentlicher Einstiegspunkt
 app.get('/', (req, res) => {
   res.redirect('/1_Spiel/spiel.html');
 });
 
-// Neuer Zombie am Bildschirmrand erzeugen
+// Zombie mit level-skalierenden Attributen spawnen
 function zombieSpawnen() {
   const id = `zombie_${naechsteZombieId++}`;
-
-  // Zufällige Kante wählen (0: Oben, 1: Rechts, 2: Unten, 3: Links)
   const kante = Math.floor(Math.random() * 4);
   let spawnX = 0;
   let spawnY = 0;
 
-  // Basis-Spielfeldgröße für Spawns
   const weltB = 1000;
   const weltH = 650;
 
   if (kante === 0) {
     spawnX = Math.random() * weltB;
-    spawnY = -20;
+    spawnY = -25;
   } else if (kante === 1) {
-    spawnX = weltB + 20;
+    spawnX = weltB + 25;
     spawnY = Math.random() * weltH;
   } else if (kante === 2) {
     spawnX = Math.random() * weltB;
-    spawnY = weltH + 20;
+    spawnY = weltH + 25;
   } else {
-    spawnX = -20;
+    spawnX = -25;
     spawnY = Math.random() * weltH;
   }
+
+  // Höhere Level machen Zombies leicht schneller und robuster
+  const levelBonusHp = (spielZustand.level - 1) * 5;
+  const levelBonusSpeed = Math.min(1.0, (spielZustand.level - 1) * 0.12);
 
   alleZombies[id] = {
     id: id,
     x: spawnX,
     y: spawnY,
     radius: 18,
-    geschwindigkeit: 2.0 + Math.random() * 0.4, // Leicht variierende Geschwindigkeit
-    hp: 30,
-    maxHp: 30,
+    geschwindigkeit: 2.0 + levelBonusSpeed + Math.random() * 0.3,
+    hp: 30 + levelBonusHp,
+    maxHp: 30 + levelBonusHp,
     winkel: 0,
     letzterAngriff: 0
   };
 
-  // console.log(`[Zombie] Neuer Zombie gespawnt: ${id} bei (${Math.round(spawnX)}, ${Math.round(spawnY)})`);
+  spielZustand.zombiesGespawnt++;
 }
 
-// Socket.IO Verbindung: Verwaltet Spieler, Schüsse und Koop-Kampf
+// Socket.IO Verbindung
 io.on('connection', (socket) => {
   console.log(`[Multiplayer] Spieler beigetreten: ID ${socket.id}`);
 
   const farbe = SPIELER_FARBEN[Math.floor(Math.random() * SPIELER_FARBEN.length)];
 
-  // Neues Spieler-Objekt erzeugen
   const neuerSpieler = {
     id: socket.id,
     name: `Spieler #${socket.id.substring(0, 4)}`,
@@ -105,25 +165,33 @@ io.on('connection', (socket) => {
     farbe: farbe,
     winkel: 0,
     hp: 100,
-    maxHp: 100,
-    letzterSchaden: 0
+    maxHp: 100
   };
 
-  // 1. Dem neuen Spieler seine Daten, Mitspieler und alle aktuellen Zombies senden
+  // 1. Initialisierung an neuen Spieler
   socket.emit('spielInitialisieren', {
     eigenerSpieler: neuerSpieler,
     andereSpieler: alleSpieler,
-    zombies: Object.values(alleZombies)
+    zombies: Object.values(alleZombies),
+    welle: {
+      level: spielZustand.level,
+      status: spielZustand.status,
+      zombiesUebrig: spielZustand.zombiesUebrig,
+      zombiesGesamt: spielZustand.zombiesGesamt,
+      pauseVerbleibend: spielZustand.pauseVerbleibend
+    }
   });
 
-  // 2. Spieler im Speicher registrieren
   alleSpieler[socket.id] = neuerSpieler;
-
-  // 3. Anderen Spielern den Neuzugang melden
   socket.broadcast.emit('neuerSpieler', neuerSpieler);
   io.emit('spielerAnzahlAktualisiert', Object.keys(alleSpieler).length);
 
-  // 4. Bewegung & Zielwinkel empfangen
+  // Wenn der erste Spieler beitritt und wir pausieren, starten wir Welle 1
+  if (Object.keys(alleSpieler).length === 1 && spielZustand.status === "pause" && spielZustand.pauseVerbleibend <= 0) {
+    welleStarten(1);
+  }
+
+  // 2. Bewegung & Zielwinkel
   socket.on('spielerBewegung', (daten) => {
     if (alleSpieler[socket.id]) {
       alleSpieler[socket.id].x = daten.x;
@@ -139,7 +207,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 5. Schuss eines Spielers empfangen und synchronisieren
+  // 3. Schuss
   socket.on('schussAbfeuern', (schussDaten) => {
     socket.broadcast.emit('schussAbgefeuert', {
       spielerId: socket.id,
@@ -151,23 +219,30 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 6. Treffer auf einen Zombie verarbeiten (Koop-Schaden)
+  // 4. Zombie getroffen (Koop-Schaden)
   socket.on('zombieTreffer', (treffer) => {
     const zombie = alleZombies[treffer.zombieId];
     if (zombie) {
       zombie.hp -= (treffer.schaden || 10);
 
-      // Zombie besiegt!
       if (zombie.hp <= 0) {
+        delete alleZombies[treffer.zombieId];
+        spielZustand.zombiesUebrig = Math.max(0, spielZustand.zombiesUebrig - 1);
+
         io.emit('zombieGestorben', {
           zombieId: zombie.id,
           x: zombie.x,
           y: zombie.y,
           killerId: socket.id
         });
-        delete alleZombies[treffer.zombieId];
+
+        welleStatusSenden();
+
+        // Prüfen, ob alle Zombies der Welle besiegt wurden
+        if (spielZustand.zombiesUebrig === 0 && spielZustand.zombiesGespawnt >= spielZustand.zombiesGesamt) {
+          welleAbschliessen();
+        }
       } else {
-        // Zombie verletzt
         io.emit('zombieVerletzt', {
           zombieId: zombie.id,
           hp: zombie.hp,
@@ -179,7 +254,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 7. Spieler verlässt das Spiel
+  // 5. Spieler getrennt
   socket.on('disconnect', () => {
     console.log(`[Multiplayer] Spieler verlassen: ID ${socket.id}`);
     delete alleSpieler[socket.id];
@@ -188,24 +263,45 @@ io.on('connection', (socket) => {
   });
 });
 
-// Zentraler Server-Loop (Tick-Rate 25/s für Zombies und KI)
+// Zentraler Server-Loop (Tick-Rate 25/s)
 setInterval(() => {
   const spielerListe = Object.values(alleSpieler);
-  if (spielerListe.length === 0) return;
-
   const jetzt = Date.now();
 
-  // Zombies periodisch spawnen (alle 2.5 Sekunden bis zum Limit)
-  if (Object.keys(alleZombies).length < MAX_ZOMBIES && jetzt - letzterSpawnZeit > 2500) {
+  // Pausen-Countdown herunterzählen (jede Sekunde)
+  if (spielZustand.status === "pause" || spielZustand.status === "welle_geschafft") {
+    if (jetzt - spielZustand.letzterPauseTick >= 1000) {
+      spielZustand.letzterPauseTick = jetzt;
+      spielZustand.pauseVerbleibend--;
+
+      io.emit('pauseCountdown', {
+        sekunden: Math.max(0, spielZustand.pauseVerbleibend),
+        naechstesLevel: spielZustand.status === "welle_geschafft" ? spielZustand.level + 1 : spielZustand.level
+      });
+
+      if (spielZustand.pauseVerbleibend <= 0 && spielerListe.length > 0) {
+        const naechstesLevel = spielZustand.status === "welle_geschafft" ? spielZustand.level + 1 : spielZustand.level;
+        welleStarten(naechstesLevel);
+      }
+    }
+    return;
+  }
+
+  // Welle aktiv: Zombies spawnen bis zum Gesamt-Limit der Welle
+  const maxGleichzeitig = Math.min(14, 4 + spielZustand.level * 2);
+  if (
+    spielZustand.status === "welle_aktiv" &&
+    Object.keys(alleZombies).length < maxGleichzeitig &&
+    spielZustand.zombiesGespawnt < spielZustand.zombiesGesamt &&
+    jetzt - letzterSpawnZeit > 1400
+  ) {
     zombieSpawnen();
     letzterSpawnZeit = jetzt;
   }
 
-  // Zombie-KI: Jeder Zombie verfolgt den nächstgelegenen Spieler
+  // Zombie-KI: Spieler verfolgen und angreifen
   for (const zId in alleZombies) {
     const z = alleZombies[zId];
-
-    // Nächstgelegenen Spieler suchen
     let naechsterSpieler = null;
     let kleinsterAbstand = Infinity;
 
@@ -220,19 +316,16 @@ setInterval(() => {
     }
 
     if (naechsterSpieler) {
-      // Bewegung auf den Spieler zu
       const dx = naechsterSpieler.x - z.x;
       const dy = naechsterSpieler.y - z.y;
       const distanz = Math.hypot(dx, dy);
 
       z.winkel = Math.atan2(dy, dx);
 
-      // Bewegen, wenn nicht direkt am Spieler
       if (distanz > (z.radius + naechsterSpieler.radius - 4)) {
         z.x += (dx / distanz) * z.geschwindigkeit;
         z.y += (dy / distanz) * z.geschwindigkeit;
       } else {
-        // Zombie greift Spieler an (Biss-Schaden alle 1 Sekunde)
         if (jetzt - z.letzterAngriff > 1000) {
           z.letzterAngriff = jetzt;
           naechsterSpieler.hp = Math.max(0, naechsterSpieler.hp - 10);
@@ -243,7 +336,6 @@ setInterval(() => {
             schaden: 10
           });
 
-          // Wenn Spieler stirbt, Respawn nach 3 Sekunden
           if (naechsterSpieler.hp <= 0) {
             setTimeout(() => {
               if (alleSpieler[naechsterSpieler.id]) {
@@ -264,7 +356,7 @@ setInterval(() => {
     }
   }
 
-  // Zombie-Positionen in einem kompakten Paket an alle Spieler senden
+  // Zombie-Positionen senden
   const zombiePaket = Object.values(alleZombies).map(z => ({
     id: z.id,
     x: Math.round(z.x),
@@ -275,13 +367,12 @@ setInterval(() => {
   }));
 
   io.emit('zombiesAktualisiert', zombiePaket);
-}, 40); // 25 Ticks pro Sekunde
+}, 40);
 
-// Server starten
 server.listen(PORT, '0.0.0.0', () => {
   console.log('=============================================');
   console.log(`🧟 Zombie Koop - Spielserver aktiv!`);
   console.log(`🌐 Server läuft auf Port: ${PORT}`);
-  console.log(`👥 Alle Spieler kämpfen gemeinsam gegen Zombies.`);
+  console.log(`🏆 Wellen- & Levelsystem aktiv.`);
   console.log('=============================================');
 });
