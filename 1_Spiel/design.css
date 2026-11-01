@@ -56,6 +56,15 @@ canvas#spielFeld {
   display: flex;
   align-items: center;
   gap: 10px;
+  pointer-events: none;
+}
+
+/* Interaktive HUD-Elemente MÜSSEN Klicks empfangen! */
+.hud-gruppe button,
+.hud-gruppe .zahnrad-btn,
+.hud-gruppe .app-install-btn,
+.zahnrad-btn {
+  pointer-events: auto !important;
 }
 
 .spiel-titel {
@@ -1229,6 +1238,9 @@ kbd {
 }
 
 .zahnrad-btn {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 50;
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -1282,15 +1294,17 @@ kbd {
   opacity: 1;
   visibility: visible;
   transition: opacity 0.25s ease, visibility 0.25s ease;
+  pointer-events: auto !important;
 }
 
 .einstellungen-modal.versteckt {
   opacity: 0;
   visibility: hidden;
-  pointer-events: none;
+  pointer-events: none !important;
 }
 
 .einstellungen-kasten {
+  pointer-events: auto !important;
   background: linear-gradient(145deg, rgba(20, 27, 45, 0.96), rgba(11, 15, 26, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(239, 68, 68, 0.15);
@@ -1727,6 +1741,7 @@ kbd {
 }
 
 .dialog-kasten {
+  pointer-events: auto !important;
   background: linear-gradient(145deg, #1e1b2e, #11101d);
   border: 1px solid rgba(239, 68, 68, 0.5);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(239, 68, 68, 0.35);

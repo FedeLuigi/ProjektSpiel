@@ -1148,23 +1148,50 @@ function spielerNameInEinstellungenAendern() {
 }
 
 function einstellungenInitialisieren() {
-  // Zahnrad-Button zum Öffnen des Menüs
+  // Zahnrad-Button zum Öffnen des Menüs: Unabhängig von Spielsteuerung anklickbar
   if (einstellungenOeffnenBtn) {
-    einstellungenOeffnenBtn.addEventListener("click", () => {
+    const oeffnenAktion = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      mausGedrueckt = false;
       einstellungenOeffnen();
+    };
+
+    einstellungenOeffnenBtn.addEventListener("click", oeffnenAktion);
+    einstellungenOeffnenBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
     });
+    einstellungenOeffnenBtn.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
+    });
+    einstellungenOeffnenBtn.addEventListener("touchstart", (e) => {
+      e.stopPropagation();
+      oeffnenAktion(e);
+    }, { passive: false });
   }
 
   // Schließen-Button (X)
   if (einstellungenSchliessenBtn) {
-    einstellungenSchliessenBtn.addEventListener("click", () => {
+    einstellungenSchliessenBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
       audioInitialisieren();
       einstellungenSchliessen();
+    });
+    einstellungenSchliessenBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
     });
   }
 
   // Schließen bei Klick auf den Hintergrund
   if (einstellungenModal) {
+    einstellungenModal.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
+    });
     einstellungenModal.addEventListener("click", (e) => {
       if (e.target === einstellungenModal) {
         audioInitialisieren();
@@ -1175,7 +1202,13 @@ function einstellungenInitialisieren() {
 
   // Tab-Navigation
   einstellungenTabs.forEach(tabBtn => {
-    tabBtn.addEventListener("click", () => {
+    tabBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
+    });
+    tabBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
       audioInitialisieren();
       const zielTabId = tabBtn.getAttribute("data-tab");
       einstellungenTabs.forEach(b => b.classList.toggle("aktiv", b === tabBtn));
@@ -1189,21 +1222,39 @@ function einstellungenInitialisieren() {
 
   // Tab 1: Spielraum verlassen mit Bestätigung
   if (einstellungenRaumVerlassenBtn && raumVerlassenDialog) {
-    einstellungenRaumVerlassenBtn.addEventListener("click", () => {
+    einstellungenRaumVerlassenBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
+    });
+    einstellungenRaumVerlassenBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
       audioInitialisieren();
       raumVerlassenDialog.classList.remove("versteckt");
     });
   }
 
   if (dialogAbbrechenBtn && raumVerlassenDialog) {
-    dialogAbbrechenBtn.addEventListener("click", () => {
+    dialogAbbrechenBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
+    });
+    dialogAbbrechenBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
       audioInitialisieren();
       raumVerlassenDialog.classList.add("versteckt");
     });
   }
 
   if (dialogBestaetigenBtn) {
-    dialogBestaetigenBtn.addEventListener("click", () => {
+    dialogBestaetigenBtn.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
+    });
+    dialogBestaetigenBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      mausGedrueckt = false;
       audioInitialisieren();
       einstellungenSchliessen();
       if (multiplayerVerbindung) {
@@ -1432,9 +1483,37 @@ function eingabeRegistrieren() {
     aktiveTasten[e.code] = false;
   });
 
+  // Hilfsfunktion: Erkennt jegliche Interaktions-Elemente (Zahnrad, Menüs, Knöpfe, Formulare)
+  function istInteraktivesUiElement(element) {
+    if (!element) return false;
+    return !!(
+      element.closest("#einstellungen-oeffnen-btn") ||
+      element.closest(".zahnrad-btn") ||
+      element.closest("#einstellungen-modal") ||
+      element.closest(".einstellungen-modal") ||
+      element.closest("#raum-verlassen-dialog") ||
+      element.closest(".dialog-overlay") ||
+      element.closest("#install-modal") ||
+      element.closest(".modal-schliessen-btn") ||
+      element.closest(".hud-gruppe") ||
+      element.closest("#spiel-hud button") ||
+      element.closest("button") ||
+      element.closest("input") ||
+      element.closest("textarea") ||
+      element.closest("label") ||
+      element.closest("a")
+    );
+  }
+
   // B. PC: Maus (Zielen & Schießen)
   window.addEventListener("mousemove", (e) => {
     if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) return;
+
+    // Wenn der Mauszeiger über dem Zahnrad oder UI-Elementen steht: nicht zielen
+    if (istInteraktivesUiElement(e.target)) {
+      return;
+    }
+
     mausX = e.clientX;
     mausY = e.clientY;
     if (!zielJoystick.aktiv) {
@@ -1443,8 +1522,21 @@ function eingabeRegistrieren() {
   });
 
   window.addEventListener("mousedown", (e) => {
+    // 1. Wenn ein Menü geöffnet ist: Mausklicks dürfen NIEMALS schießen!
+    if (einstellungenGeoeffnet) {
+      mausGedrueckt = false;
+      return;
+    }
+
+    // 2. Klicks auf das Zahnrad, Einstellungen, Modals oder Buttons dürfen NIEMALS schießen!
+    if (istInteraktivesUiElement(e.target) || (canvas && e.target !== canvas)) {
+      mausGedrueckt = false;
+      return;
+    }
+
     audioInitialisieren();
-    if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) return;
+    if (aktuellerZustand !== "spiel") return;
+
     if (e.button === 0) {
       mausGedrueckt = true;
       versucheSchussAbzugeben();
@@ -1457,6 +1549,12 @@ function eingabeRegistrieren() {
     }
   });
 
+  // Wenn der Fokus das Fenster verlässt: Dauerfeuer und Tasten sofort stoppen
+  window.addEventListener("blur", () => {
+    mausGedrueckt = false;
+    for (const k in aktiveTasten) aktiveTasten[k] = false;
+  });
+
   // C. Smartphone: Touch
   canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
   canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
@@ -1466,6 +1564,11 @@ function eingabeRegistrieren() {
 
 function handleTouchStart(e) {
   if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) return;
+
+  // Touch auf Zahnrad oder Menüs niemals als Joystick / Schuss interpretieren
+  if (e.target && (e.target.closest("#einstellungen-oeffnen-btn") || e.target.closest(".zahnrad-btn") || e.target.closest("#einstellungen-modal") || e.target.closest(".hud-gruppe"))) {
+    return;
+  }
   e.preventDefault();
   audioInitialisieren();
   istTouchGeraet = true;
@@ -1555,7 +1658,7 @@ function handleTouchEnd(e) {
 
 // 5. Schuss-Mechanik
 function versucheSchussAbzugeben() {
-  if (spieler.hp <= 0) return; // Tote Spieler können nicht schießen
+  if (spieler.hp <= 0 || einstellungenGeoeffnet || aktuellerZustand !== "spiel") return; // Tote Spieler oder Menüs verhindern Schießen
 
   const jetzt = Date.now();
   if (jetzt - letzterSchussZeit < Spieleinstellungen.waffe.schussRate) {
