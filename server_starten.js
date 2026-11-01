@@ -116,11 +116,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// Server auf gewähltem Port starten
-server.listen(PORT, () => {
+// Server auf gewähltem Port starten (0.0.0.0 bindet an alle Netzwerkschnittstellen für Render)
+server.listen(PORT, '0.0.0.0', () => {
   console.log('=============================================');
   console.log(`🎮 ProjektSpiel - Öffentliche 2D-Welt aktiv!`);
-  console.log(`🌐 Öffne im Browser: http://localhost:${PORT}`);
+  console.log(`🌐 Server läuft auf Port: ${PORT}`);
   console.log(`👥 Alle Spieler landen in derselben Welt.`);
   console.log('=============================================');
 });

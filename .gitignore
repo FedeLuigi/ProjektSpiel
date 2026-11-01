@@ -1,0 +1,9 @@
+# Abhängigkeiten (werden von Render automatisch auf dem Server installiert)
+node_modules/
+
+# Umgebungsvariablen
+.env
+
+# Betriebssystem-Dateien
+.DS_Store
+Thumbs.db
