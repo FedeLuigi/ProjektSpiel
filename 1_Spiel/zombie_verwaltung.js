@@ -47,6 +47,70 @@ function zombieSpawnen(raum, level) {
   return neuerZombie;
 }
 
+// Berechnet einen sicheren Spawnpunkt mit maximalem Abstand zu allen Zombies
+function findeSicherenSpawnpunkt(raum) {
+  const weltB = (WELT && WELT.breite) || 1000;
+  const weltH = (WELT && WELT.hoehe) || 650;
+  const randAbstand = 70;
+
+  const zombies = raum && raum.zombies ? Object.values(raum.zombies) : [];
+
+  // Wenn keine Zombies im Raum sind: Spielfeldmitte mit leichter Streuung
+  if (zombies.length === 0) {
+    return {
+      x: Math.round(weltB / 2 + (Math.random() - 0.5) * 60),
+      y: Math.round(weltH / 2 + (Math.random() - 0.5) * 60)
+    };
+  }
+
+  // Strategische Testpunkte auf der gesamten Spielfläche (Ecken, Kanten, Mitte, Quadranten)
+  const kandidaten = [
+    { x: randAbstand, y: randAbstand },
+    { x: weltB - randAbstand, y: randAbstand },
+    { x: randAbstand, y: weltH - randAbstand },
+    { x: weltB - randAbstand, y: weltH - randAbstand },
+    { x: Math.round(weltB / 2), y: randAbstand },
+    { x: Math.round(weltB / 2), y: weltH - randAbstand },
+    { x: randAbstand, y: Math.round(weltH / 2) },
+    { x: weltB - randAbstand, y: Math.round(weltH / 2) },
+    { x: Math.round(weltB / 2), y: Math.round(weltH / 2) },
+    { x: Math.round(weltB * 0.25), y: Math.round(weltH * 0.25) },
+    { x: Math.round(weltB * 0.75), y: Math.round(weltH * 0.25) },
+    { x: Math.round(weltB * 0.25), y: Math.round(weltH * 0.75) },
+    { x: Math.round(weltB * 0.75), y: Math.round(weltH * 0.75) }
+  ];
+
+  // Zusätzliche zufällig verteilte Kandidatenpunkte für optimale Abdeckung
+  for (let i = 0; i < 18; i++) {
+    kandidaten.push({
+      x: Math.round(randAbstand + Math.random() * (weltB - 2 * randAbstand)),
+      y: Math.round(randAbstand + Math.random() * (weltH - 2 * randAbstand))
+    });
+  }
+
+  let besterPunkt = kandidaten[0];
+  let groessterMindestAbstand = -1;
+
+  for (const k of kandidaten) {
+    let mindestAbstand = Infinity;
+
+    for (const z of zombies) {
+      const dist = Math.hypot(k.x - z.x, k.y - z.y);
+      if (dist < mindestAbstand) {
+        mindestAbstand = dist;
+      }
+    }
+
+    if (mindestAbstand > groessterMindestAbstand) {
+      groessterMindestAbstand = mindestAbstand;
+      besterPunkt = k;
+    }
+  }
+
+  console.log(`[Respawn] Sicherer Spawnpunkt ermittelt: (${besterPunkt.x}, ${besterPunkt.y}) mit ${Math.round(groessterMindestAbstand)}px Abstand zum nächsten Zombie`);
+  return besterPunkt;
+}
+
 // Führt die Zombie-KI aus: Verfolgt den nächstgelegenen Spieler im Raum und greift an
 function zombiesAktualisieren(raum, io) {
   if (!raum || !raum.zombies || !raum.spieler) return;
@@ -59,12 +123,15 @@ function zombiesAktualisieren(raum, io) {
     let naechsterSpieler = null;
     let kleinsterAbstand = Infinity;
 
-    // Nächstgelegenen lebenden Spieler im Raum suchen
+    // Nächstgelegenen lebenden Spieler im Raum suchen (bevorzugt verwundbare Spieler)
     for (const p of spielerListe) {
       if (p.hp > 0) {
+        const istImmun = p.schutzBis && jetzt < p.schutzBis;
         const abstand = Math.hypot(p.x - z.x, p.y - z.y);
-        if (abstand < kleinsterAbstand) {
-          kleinsterAbstand = abstand;
+        // Immunen Spielern einen virtuellen Abstandsmalus geben, damit Zombies verwundbare Mitspieler attackieren
+        const gewichteterAbstand = istImmun ? (abstand + 250) : abstand;
+        if (gewichteterAbstand < kleinsterAbstand) {
+          kleinsterAbstand = gewichteterAbstand;
           naechsterSpieler = p;
         }
       }
@@ -82,6 +149,13 @@ function zombiesAktualisieren(raum, io) {
         z.x += (dx / distanz) * z.geschwindigkeit;
         z.y += (dy / distanz) * z.geschwindigkeit;
       } else {
+        // Prüfen, ob der Spieler durch Respawn-Schutz immun ist oder tot ist
+        const istImmun = (naechsterSpieler.schutzBis && jetzt < naechsterSpieler.schutzBis) || naechsterSpieler.hp <= 0;
+        if (istImmun) {
+          // Spieler ist unantastbar -> KEIN Schaden durch Zombie-Angriffe!
+          continue;
+        }
+
         // Biss-Angriff (alle 1000ms)
         if (jetzt - z.letzterAngriff > 1000) {
           z.letzterAngriff = jetzt;
@@ -93,21 +167,32 @@ function zombiesAktualisieren(raum, io) {
             schaden: 10
           });
 
-          // Respawn nach 3 Sekunden, falls Spieler stirbt
-          if (naechsterSpieler.hp <= 0) {
+          // Respawn nach 3 Sekunden, falls Spieler stirbt (nur einmalig planen)
+          if (naechsterSpieler.hp <= 0 && !naechsterSpieler.respawnAktiv) {
+            naechsterSpieler.respawnAktiv = true;
             const spielerId = naechsterSpieler.id;
             setTimeout(() => {
               if (raum && raum.spieler && raum.spieler[spielerId]) {
                 const s = raum.spieler[spielerId];
                 s.hp = 100;
-                s.x = 400 + Math.round((Math.random() - 0.5) * 80);
-                s.y = 300 + Math.round((Math.random() - 0.5) * 80);
+                s.respawnAktiv = false;
+
+                // 1. Sicheren Spawnpunkt mit größtmöglichem Abstand zu allen Zombies wählen
+                const sichererPunkt = findeSicherenSpawnpunkt(raum);
+                s.x = sichererPunkt.x;
+                s.y = sichererPunkt.y;
+
+                // 2. Genau 2 Sekunden Schutz nach dem Respawn (serverseitig geprüft)
+                const schutzDauerMs = 2000;
+                s.schutzBis = Date.now() + schutzDauerMs;
 
                 io.to(raum.code).emit('spielerRespawn', {
                   spielerId: s.id,
                   hp: s.hp,
                   x: s.x,
-                  y: s.y
+                  y: s.y,
+                  schutzDauerMs: schutzDauerMs,
+                  schutzBis: s.schutzBis
                 });
               }
             }, 3000);
