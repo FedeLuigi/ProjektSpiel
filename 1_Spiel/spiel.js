@@ -1,9 +1,12 @@
-// Hauptlogik des 2D-Top-Down-Multiplayer-Spiels mit Schießen & Projektilen
+// Hauptlogik des 2D-Top-Down-Multiplayer-Spiels mit Zombies und Koop-Kampf
 
 // 1. Initialisierung und Zustände
 let canvas = null;
 let ctx = null;
 let positionsAnzeige = null;
+let lebenFuellung = null;
+let lebenText = null;
+let zombieAnzeige = null;
 
 // Sound-System (Web Audio API - ohne externe Dateien)
 let audioKontext = null;
@@ -19,10 +22,16 @@ let mausGedrueckt = false;
 // Tastaturstatus auf dem PC
 const aktiveTasten = {};
 
-// Liste aller fliegenden Projektile (eigene und fremde)
+// Listen für Entities, Projektile, Partikel und Blutflecken
 const projektile = [];
+let aktiveZombies = [];
+const blutFlecken = []; // Bleibende Blutflecken auf dem Boden
+const partikel = [];    // Kurzlebige Treffer-Partikel
 
-// Zeitstempel des letzten abgegebenen Schusses (für Schussrate)
+// Visueller Treffereffekt (rotes Aufblitzen des Bildschirms)
+let schadenBlitz = 0;
+
+// Zeitstempel des letzten Schusses
 let letzterSchussZeit = 0;
 
 // Eigene Top-Down Spielfigur
@@ -35,9 +44,11 @@ const spieler = {
   breite: Spieleinstellungen.spieler.breite,
   hoehe: Spieleinstellungen.spieler.hoehe,
   geschwindigkeit: Spieleinstellungen.spieler.geschwindigkeit,
+  hp: 100,
+  maxHp: 100,
   farbe: Spieleinstellungen.spieler.standardFarbe,
   winkel: 0,
-  muendungsfeuer: 0 // Frames, die das Mündungsfeuer sichtbar ist
+  muendungsfeuer: 0
 };
 
 // Virtuelle Touch-Joysticks für Smartphones
@@ -70,6 +81,9 @@ function spielStarten() {
   canvas = document.getElementById("spielFeld");
   ctx = canvas.getContext("2d");
   positionsAnzeige = document.getElementById("spieler-pos");
+  lebenFuellung = document.getElementById("spieler-leben-fuellung");
+  lebenText = document.getElementById("spieler-leben-text");
+  zombieAnzeige = document.getElementById("zombie-anzahl");
 
   // Vollbild initialisieren
   bildschirmGroesseAnpassen();
@@ -78,30 +92,71 @@ function spielStarten() {
     setTimeout(bildschirmGroesseAnpassen, 150);
   });
 
-  // Spieler in Bildschirmmitte starten lassen
+  // Spieler in Bildschirmmitte starten
   spieler.x = canvas.width / 2;
   spieler.y = canvas.height / 2;
   mausX = spieler.x + 100;
   mausY = spieler.y;
 
-  // Steuerung initialisieren (PC & Touch)
+  // Eingabesteuerung aktivieren
   eingabeRegistrieren();
 
-  // Socket.IO Multiplayer starten inkl. Empfang fremder Schüsse
+  // Socket.IO Multiplayer starten inklusive Zombie-Events
   multiplayerVerbindung = new MultiplayerVerbindung({
     onInitialisiert: (serverSpieler) => {
       spieler.id = serverSpieler.id;
       spieler.farbe = serverSpieler.farbe;
       spieler.winkel = serverSpieler.winkel || 0;
+      spieler.hp = serverSpieler.hp || 100;
+      lebenAktualisieren(spieler.hp);
+
       if (canvas.width > 0 && canvas.height > 0) {
         spieler.x = Math.min(Math.max(spieler.radius, serverSpieler.x), canvas.width - spieler.radius);
         spieler.y = Math.min(Math.max(spieler.radius, serverSpieler.y), canvas.height - spieler.radius);
       }
-      console.log(`[Top-Down] Eingeloggt als ${spieler.name}`);
+      console.log(`[Top-Down Koop] Eingeloggt als ${spieler.name}`);
     },
-    // Wenn ein Mitspieler schießt
+
     onSchussEmpfangen: (schussDaten) => {
       fremdenSchussErzeugen(schussDaten);
+    },
+
+    // Synchronisation der Zombies vom Server
+    onZombiesAktualisiert: (zombieListe) => {
+      aktiveZombies = zombieListe;
+      if (zombieAnzeige) {
+        zombieAnzeige.textContent = `🧟 ${aktiveZombies.length}`;
+      }
+    },
+
+    // Zombie besiegt
+    onZombieGestorben: (daten) => {
+      blutErzeugen(daten.x, daten.y, true);
+    },
+
+    // Zombie getroffen
+    onZombieVerletzt: (daten) => {
+      blutErzeugen(daten.trefferX || daten.x, daten.trefferY || daten.y, false);
+    },
+
+    // Spieler nimmt Schaden
+    onSpielerSchaden: (daten) => {
+      if (daten.spielerId === spieler.id) {
+        spieler.hp = daten.hp;
+        lebenAktualisieren(spieler.hp);
+        schadenBlitz = 4; // Rotes Aufblitzen
+        soundEffektTreffer();
+      }
+    },
+
+    // Spieler wiederbelebt
+    onSpielerRespawn: (daten) => {
+      if (daten.spielerId === spieler.id) {
+        spieler.hp = daten.hp;
+        spieler.x = daten.x;
+        spieler.y = daten.y;
+        lebenAktualisieren(spieler.hp);
+      }
     }
   });
 
@@ -115,12 +170,11 @@ function bildschirmGroesseAnpassen() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 
-  // Begrenzungen einhalten
   spieler.x = Math.max(spieler.radius, Math.min(canvas.width - spieler.radius, spieler.x));
   spieler.y = Math.max(spieler.radius, Math.min(canvas.height - spieler.radius, spieler.y));
 }
 
-// 3. Audio-Synthese: Knackiger Schusssound ohne externe Sounddateien
+// 3. Audio-Synthese: Knackiger Schuss & Treffersound
 function audioInitialisieren() {
   if (!audioKontext) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -135,12 +189,9 @@ function audioInitialisieren() {
 
 function soundEffektSchuss() {
   if (!audioKontext) return;
-
   try {
     const jetzt = audioKontext.currentTime;
-
-    // 1. Kurzer weißer Rausch-Burst (Knall)
-    const bufferGroesse = audioKontext.sampleRate * 0.06; // 60ms
+    const bufferGroesse = audioKontext.sampleRate * 0.06;
     const buffer = audioKontext.createBuffer(1, bufferGroesse, audioKontext.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferGroesse; i++) {
@@ -150,7 +201,6 @@ function soundEffektSchuss() {
     const rauschQuelle = audioKontext.createBufferSource();
     rauschQuelle.buffer = buffer;
 
-    // Filter für dumpferen Gewehrklang
     const filter = audioKontext.createBiquadFilter();
     filter.type = "lowpass";
     filter.frequency.setValueAtTime(1400, jetzt);
@@ -163,16 +213,33 @@ function soundEffektSchuss() {
     rauschQuelle.connect(filter);
     filter.connect(gainNode);
     gainNode.connect(audioKontext.destination);
-
     rauschQuelle.start(jetzt);
-  } catch (e) {
-    // Audio nicht verfügbar oder geblockt
-  }
+  } catch (e) {}
 }
 
-// 4. Eingabe-Registrierung: PC (Maus & Tastatur) und Smartphone (Touch)
+function soundEffektTreffer() {
+  if (!audioKontext) return;
+  try {
+    const jetzt = audioKontext.currentTime;
+    const osc = audioKontext.createOscillator();
+    const gain = audioKontext.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(120, jetzt);
+    osc.frequency.exponentialRampToValueAtTime(40, jetzt + 0.1);
+
+    gain.gain.setValueAtTime(0.3, jetzt);
+    gain.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.1);
+
+    osc.connect(gain);
+    gain.connect(audioKontext.destination);
+    osc.start(jetzt);
+    osc.stop(jetzt + 0.1);
+  } catch (e) {}
+}
+
+// 4. Eingabe-Registrierung
 function eingabeRegistrieren() {
-  // A. PC: Tastatur (WASD / Pfeile / Leertaste zum Schießen)
+  // A. PC: Tastatur
   window.addEventListener("keydown", (e) => {
     audioInitialisieren();
     aktiveTasten[e.key.toLowerCase()] = true;
@@ -187,7 +254,7 @@ function eingabeRegistrieren() {
     aktiveTasten[e.code] = false;
   });
 
-  // B. PC: Mausbewegung (Zielen) und Klick (Schießen)
+  // B. PC: Maus (Zielen & Schießen)
   window.addEventListener("mousemove", (e) => {
     mausX = e.clientX;
     mausY = e.clientY;
@@ -198,7 +265,6 @@ function eingabeRegistrieren() {
 
   window.addEventListener("mousedown", (e) => {
     audioInitialisieren();
-    // Nur bei Linksklick schießen
     if (e.button === 0) {
       mausGedrueckt = true;
       versucheSchussAbzugeben();
@@ -211,14 +277,13 @@ function eingabeRegistrieren() {
     }
   });
 
-  // C. Smartphone: Touch-Ereignisse (Zwei-Zonen-System)
+  // C. Smartphone: Touch
   canvas.addEventListener("touchstart", handleTouchStart, { passive: false });
   canvas.addEventListener("touchmove", handleTouchMove, { passive: false });
   canvas.addEventListener("touchend", handleTouchEnd, { passive: false });
   canvas.addEventListener("touchcancel", handleTouchEnd, { passive: false });
 }
 
-// Touch-Start: Links = Bewegen, Rechts = Zielen & Dauerfeuer
 function handleTouchStart(e) {
   e.preventDefault();
   audioInitialisieren();
@@ -228,7 +293,6 @@ function handleTouchStart(e) {
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
 
-    // Linke Hälfte: Bewegung
     if (touch.clientX < breiteHalb && !bewegungsJoystick.aktiv) {
       bewegungsJoystick.aktiv = true;
       bewegungsJoystick.touchId = touch.identifier;
@@ -238,9 +302,7 @@ function handleTouchStart(e) {
       bewegungsJoystick.aktuellY = touch.clientY;
       bewegungsJoystick.vektorX = 0;
       bewegungsJoystick.vektorY = 0;
-    }
-    // Rechte Hälfte: Zielen & sofortiger erster Schuss
-    else if (touch.clientX >= breiteHalb && !zielJoystick.aktiv) {
+    } else if (touch.clientX >= breiteHalb && !zielJoystick.aktiv) {
       zielJoystick.aktiv = true;
       zielJoystick.touchId = touch.identifier;
       zielJoystick.startX = touch.clientX;
@@ -252,7 +314,6 @@ function handleTouchStart(e) {
   }
 }
 
-// Touch-Bewegung: Auslenkung & 360-Grad-Zielen
 function handleTouchMove(e) {
   e.preventDefault();
   const maxWeg = Spieleinstellungen.touch.maxAuslenkung;
@@ -260,7 +321,6 @@ function handleTouchMove(e) {
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
 
-    // Linker Joystick (Bewegung)
     if (bewegungsJoystick.aktiv && touch.identifier === bewegungsJoystick.touchId) {
       const dx = touch.clientX - bewegungsJoystick.startX;
       const dy = touch.clientY - bewegungsJoystick.startY;
@@ -279,11 +339,9 @@ function handleTouchMove(e) {
       }
     }
 
-    // Rechter Joystick (Zielen in 360 Grad)
     if (zielJoystick.aktiv && touch.identifier === zielJoystick.touchId) {
       zielJoystick.aktuellX = touch.clientX;
       zielJoystick.aktuellY = touch.clientY;
-
       const zdx = touch.clientX - zielJoystick.startX;
       const zdy = touch.clientY - zielJoystick.startY;
 
@@ -294,19 +352,16 @@ function handleTouchMove(e) {
   }
 }
 
-// Touch-Ende
 function handleTouchEnd(e) {
   e.preventDefault();
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
-
     if (bewegungsJoystick.aktiv && touch.identifier === bewegungsJoystick.touchId) {
       bewegungsJoystick.aktiv = false;
       bewegungsJoystick.touchId = null;
       bewegungsJoystick.vektorX = 0;
       bewegungsJoystick.vektorY = 0;
     }
-
     if (zielJoystick.aktiv && touch.identifier === zielJoystick.touchId) {
       zielJoystick.aktiv = false;
       zielJoystick.touchId = null;
@@ -314,20 +369,20 @@ function handleTouchEnd(e) {
   }
 }
 
-// 5. Schuss-Mechanik (Feuern, Ballistik & Mündungsfeuer)
+// 5. Schuss-Mechanik
 function versucheSchussAbzugeben() {
+  if (spieler.hp <= 0) return; // Tote Spieler können nicht schießen
+
   const jetzt = Date.now();
   if (jetzt - letzterSchussZeit < Spieleinstellungen.waffe.schussRate) {
     return;
   }
   letzterSchussZeit = jetzt;
 
-  // Waffenmündung berechnen
   const waffenLaenge = Spieleinstellungen.spieler.waffenLaenge;
   const muendungX = spieler.x + Math.cos(spieler.winkel) * waffenLaenge;
   const muendungY = spieler.y + Math.sin(spieler.winkel) * waffenLaenge;
 
-  // Leichte Streuung für realistisches Schussverhalten
   const streuung = (Math.random() - 0.5) * Spieleinstellungen.waffe.streuung;
   const schussWinkel = spieler.winkel + streuung;
 
@@ -335,10 +390,8 @@ function versucheSchussAbzugeben() {
   const vx = Math.cos(schussWinkel) * geschwindigkeit;
   const vy = Math.sin(schussWinkel) * geschwindigkeit;
 
-  // Mündungsfeuer an der eigenen Figur aktivieren
   spieler.muendungsfeuer = 3;
 
-  // Eigenes Projektil zur lokalen Liste hinzufügen
   projektile.push({
     x: muendungX,
     y: muendungY,
@@ -347,13 +400,12 @@ function versucheSchussAbzugeben() {
     vx: vx,
     vy: vy,
     spielerId: spieler.id,
+    istEigenerSchuss: true,
     verbleibendeReichweite: Spieleinstellungen.waffe.maxReichweite
   });
 
-  // Sound abspielen
   soundEffektSchuss();
 
-  // Schuss über Socket.IO an alle Mitspieler senden
   if (multiplayerVerbindung) {
     multiplayerVerbindung.sendeSchuss({
       x: Math.round(muendungX),
@@ -365,7 +417,6 @@ function versucheSchussAbzugeben() {
   }
 }
 
-// Erzeugt ein Projektil, das von einem Mitspieler über den Server empfangen wurde
 function fremdenSchussErzeugen(schuss) {
   projektile.push({
     x: schuss.x,
@@ -375,64 +426,89 @@ function fremdenSchussErzeugen(schuss) {
     vx: schuss.vx,
     vy: schuss.vy,
     spielerId: schuss.spielerId,
+    istEigenerSchuss: false,
     verbleibendeReichweite: Spieleinstellungen.waffe.maxReichweite
   });
 
-  // Mündungsfeuer beim entsprechenden Mitspieler aktivieren
   if (multiplayerVerbindung && multiplayerVerbindung.andereSpieler[schuss.spielerId]) {
     multiplayerVerbindung.andereSpieler[schuss.spielerId].muendungsfeuer = 3;
   }
-
-  // Leiserer Sound für fremde Schüsse
   soundEffektSchuss();
 }
 
-// 6. Spielfigur & Projektile aktualisieren
+// 6. Blutspritzer und Treffer-Partikel
+function blutErzeugen(x, y, istTod) {
+  // 1. Kurzlebige Partikel für die Flug-Animation
+  const partikelAnzahl = istTod ? 16 : 6;
+  for (let i = 0; i < partikelAnzahl; i++) {
+    const winkel = Math.random() * Math.PI * 2;
+    const tempo = 1.5 + Math.random() * 4;
+    partikel.push({
+      x: x,
+      y: y,
+      vx: Math.cos(winkel) * tempo,
+      vy: Math.sin(winkel) * tempo,
+      radius: 2 + Math.random() * 2.5,
+      farbe: Math.random() > 0.4 ? "#dc2626" : "#991b1b",
+      leben: 1.0,
+      decay: 0.04 + Math.random() * 0.03
+    });
+  }
+
+  // 2. Bleibende Blutflecken auf dem Boden (maximal 50 für flüssige Performance)
+  if (blutFlecken.length > 50) {
+    blutFlecken.shift();
+  }
+  blutFlecken.push({
+    x: x + (Math.random() - 0.5) * 8,
+    y: y + (Math.random() - 0.5) * 8,
+    radius: istTod ? (14 + Math.random() * 8) : (6 + Math.random() * 5),
+    rotation: Math.random() * Math.PI * 2,
+    alpha: 0.65
+  });
+}
+
+// 7. Spielfigur, Projektile & Partikel aktualisieren
 function spielerAktualisieren() {
+  if (spieler.hp <= 0) return; // Tote Spieler pausieren bis Respawn
+
   let moveX = 0;
   let moveY = 0;
 
-  // A. Bewegung über PC-Tastatur
   if (aktiveTasten["w"] || aktiveTasten["arrowup"]) moveY -= 1;
   if (aktiveTasten["s"] || aktiveTasten["arrowdown"]) moveY += 1;
   if (aktiveTasten["a"] || aktiveTasten["arrowleft"]) moveX -= 1;
   if (aktiveTasten["d"] || aktiveTasten["arrowright"]) moveX += 1;
 
-  // Diagonale Geschwindigkeit normieren
   const tastenLaenge = Math.hypot(moveX, moveY);
   if (tastenLaenge > 0) {
     moveX = (moveX / tastenLaenge) * spieler.geschwindigkeit;
     moveY = (moveY / tastenLaenge) * spieler.geschwindigkeit;
   }
 
-  // B. Bewegung über Touch-Joystick
   if (bewegungsJoystick.aktiv) {
     moveX = bewegungsJoystick.vektorX * spieler.geschwindigkeit;
     moveY = bewegungsJoystick.vektorY * spieler.geschwindigkeit;
   }
 
-  // Position aktualisieren
   spieler.x += moveX;
   spieler.y += moveY;
 
-  // Bildschirmgrenzen beachten
   const r = spieler.radius;
   if (spieler.x < r) spieler.x = r;
   if (spieler.x > canvas.width - r) spieler.x = canvas.width - r;
   if (spieler.y < r) spieler.y = r;
   if (spieler.y > canvas.height - r) spieler.y = canvas.height - r;
 
-  // C. Dauerfeuer auslösen (PC: Maus gedrückt oder Leertaste | Smartphone: Rechter Touch aktiv)
+  // Dauerfeuer prüfen
   if (mausGedrueckt || aktiveTasten["space"] || zielJoystick.aktiv) {
     versucheSchussAbzugeben();
   }
 
-  // Koordinatenanzeige im HUD
   if (positionsAnzeige) {
     positionsAnzeige.textContent = `X: ${Math.round(spieler.x)} | Y: ${Math.round(spieler.y)}`;
   }
 
-  // Bewegung und Blickwinkel an Server senden
   if (multiplayerVerbindung) {
     multiplayerVerbindung.sendeBewegung(
       Math.round(spieler.x),
@@ -442,7 +518,7 @@ function spielerAktualisieren() {
   }
 }
 
-// Bewegt alle Kugeln und entfernt sie bei Wandtreffer oder Reichweitenende
+// Kugeln bewegen und Treffer auf Zombies berechnen
 function projektileAktualisieren() {
   for (let i = projektile.length - 1; i >= 0; i--) {
     const p = projektile[i];
@@ -455,8 +531,29 @@ function projektileAktualisieren() {
     const distanz = Math.hypot(p.vx, p.vy);
     p.verbleibendeReichweite -= distanz;
 
-    // Kugel löschen bei Wandkontakt oder Reichweitenende
+    // Kollisionsprüfung Kugel mit Zombies
+    let kugelEntfernt = false;
+
+    for (let z = 0; z < aktiveZombies.length; z++) {
+      const zombie = aktiveZombies[z];
+      const zDist = Math.hypot(p.x - zombie.x, p.y - zombie.y);
+
+      // Treffer!
+      if (zDist < (zombie.radius || Spieleinstellungen.zombie.radius) + 4) {
+        kugelEntfernt = true;
+        blutErzeugen(p.x, p.y, false);
+
+        // Treffer an Server melden (wenn es unsere Kugel ist)
+        if (p.istEigenerSchuss && multiplayerVerbindung) {
+          multiplayerVerbindung.sendeZombieTreffer(zombie.id, 10, p.x, p.y);
+        }
+        break;
+      }
+    }
+
+    // Löschen bei Treffer oder Verlassen des Bildschirms
     const ausserhalb =
+      kugelEntfernt ||
       p.x < 0 || p.x > canvas.width ||
       p.y < 0 || p.y > canvas.height ||
       p.verbleibendeReichweite <= 0;
@@ -467,19 +564,60 @@ function projektileAktualisieren() {
   }
 }
 
-// 7. Zeichnen der Spielwelt
+// Partikel bewegen und verblassen
+function partikelAktualisieren() {
+  for (let i = partikel.length - 1; i >= 0; i--) {
+    const p = partikel[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.92;
+    p.vy *= 0.92;
+    p.leben -= p.decay;
+    if (p.leben <= 0) {
+      partikel.splice(i, 1);
+    }
+  }
+}
+
+// Lebensbalken im HUD anpassen
+function lebenAktualisieren(hp) {
+  if (lebenFuellung && lebenText) {
+    const prozent = Math.max(0, Math.min(100, hp));
+    lebenFuellung.style.width = prozent + "%";
+    lebenText.textContent = `${prozent}`;
+
+    if (prozent > 50) {
+      lebenFuellung.style.backgroundColor = "#22c55e"; // Grün
+    } else if (prozent > 25) {
+      lebenFuellung.style.backgroundColor = "#f59e0b"; // Gelb
+    } else {
+      lebenFuellung.style.backgroundColor = "#ef4444"; // Rot
+    }
+  }
+}
+
+// 8. Zeichnen der Spielwelt
 function zeichnen() {
-  // Hintergrund löschen
+  // Hintergrund
   ctx.fillStyle = Spieleinstellungen.design.hintergrundFarbe;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Orientierungsraster zeichnen
+  // Raster
   gitterZeichnen();
 
-  // 1. Alle fliegenden Projektile zeichnen
+  // 1. Blutflecken auf dem Boden zeichnen
+  blutZeichnen();
+
+  // 2. Kurzlebige Blut-Partikel zeichnen
+  partikelZeichnen();
+
+  // 3. Projektile zeichnen
   projektileZeichnen();
 
-  // 2. Alle anderen Mitspieler zeichnen
+  // 4. Zombies zeichnen (Top-Down)
+  zombiesZeichnen();
+
+  // 5. Mitspieler zeichnen
   if (multiplayerVerbindung) {
     const andere = multiplayerVerbindung.getAndereSpieler();
     for (const mitspieler of andere) {
@@ -487,19 +625,32 @@ function zeichnen() {
     }
   }
 
-  // 3. Eigene Spielfigur zeichnen
-  topDownFigurZeichnen(spieler, true);
+  // 6. Eigene Spielfigur zeichnen (wenn lebendig)
+  if (spieler.hp > 0) {
+    topDownFigurZeichnen(spieler, true);
+  } else {
+    // Todesanzeige / Respawn-Hinweis
+    totenBildschirmZeichnen();
+  }
 
-  // 4. Touch-Joysticks auf Smartphones zeichnen
+  // 7. Touch-Steuerung
   touchSteuerungZeichnen();
+
+  // 8. Rotes Aufblitzen bei erlittenem Schaden
+  if (schadenBlitz > 0) {
+    ctx.save();
+    ctx.fillStyle = `rgba(239, 68, 68, ${schadenBlitz * 0.08})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    schadenBlitz--;
+  }
 }
 
-// Orientierungsraster zeichnen
+// Orientierungsraster
 function gitterZeichnen() {
   const gitter = Spieleinstellungen.design.gitterGroesse;
   ctx.strokeStyle = Spieleinstellungen.design.gitterFarbe;
   ctx.lineWidth = 1;
-
   ctx.beginPath();
   for (let x = 0; x < canvas.width; x += gitter) {
     ctx.moveTo(x, 0);
@@ -512,11 +663,35 @@ function gitterZeichnen() {
   ctx.stroke();
 }
 
-// Zeichnet alle fliegenden Kugeln mit Leuchtschweif
+// Blutflecken auf dem Boden
+function blutZeichnen() {
+  ctx.save();
+  for (const b of blutFlecken) {
+    ctx.fillStyle = `rgba(153, 27, 27, ${b.alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(b.x, b.y, b.radius, b.radius * 0.75, b.rotation, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Flug-Partikel
+function partikelZeichnen() {
+  ctx.save();
+  for (const p of partikel) {
+    ctx.fillStyle = p.farbe;
+    ctx.globalAlpha = p.leben;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// Projektile
 function projektileZeichnen() {
   ctx.save();
   for (const p of projektile) {
-    // Leuchtender Schweif
     ctx.strokeStyle = Spieleinstellungen.waffe.schweifFarbe;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
@@ -524,7 +699,6 @@ function projektileZeichnen() {
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
 
-    // Helle Kugelspitze
     ctx.fillStyle = Spieleinstellungen.waffe.kugelFarbe;
     ctx.shadowColor = Spieleinstellungen.waffe.kugelFarbe;
     ctx.shadowBlur = 8;
@@ -535,7 +709,68 @@ function projektileZeichnen() {
   ctx.restore();
 }
 
-// Zeichnet eine Top-Down-Spielfigur mit Waffe, Mündungsfeuer und Taschenlampe
+// Zombies zeichnen (Top-Down mit ausgestreckten Armen und glühenden Augen)
+function zombiesZeichnen() {
+  for (const z of aktiveZombies) {
+    ctx.save();
+    ctx.translate(z.x, z.y);
+    ctx.rotate(z.winkel || 0);
+
+    const r = z.radius || Spieleinstellungen.zombie.radius;
+
+    // 1. Ausgestreckte Arme greifen nach vorne
+    ctx.fillStyle = Spieleinstellungen.zombie.farbe;
+    ctx.beginPath();
+    ctx.arc(r * 0.9, -8, 4.5, 0, Math.PI * 2); // Linker Arm
+    ctx.arc(r * 0.9, 8, 4.5, 0, Math.PI * 2);  // Rechter Arm
+    ctx.fill();
+
+    // 2. Verwesender Körper (Torso)
+    ctx.fillStyle = Spieleinstellungen.zombie.farbe;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.75, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#365314";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // 3. Kopf
+    ctx.fillStyle = "#3f6212";
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Glühende rote Augen
+    ctx.fillStyle = Spieleinstellungen.zombie.augenFarbe;
+    ctx.shadowColor = Spieleinstellungen.zombie.augenFarbe;
+    ctx.shadowBlur = 5;
+    ctx.beginPath();
+    ctx.arc(r * 0.35, -4, 2.5, 0, Math.PI * 2);
+    ctx.arc(r * 0.35, 4, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // 5. Kleiner Lebensbalken über dem Zombie (nur wenn angeschlagen)
+    if (z.hp < (z.maxHp || 30)) {
+      const balkenBreite = 28;
+      const balkenHoehe = 4;
+      const prozent = Math.max(0, z.hp / (z.maxHp || 30));
+
+      ctx.save();
+      // Hintergrund (rot)
+      ctx.fillStyle = "rgba(15, 23, 42, 0.7)";
+      ctx.fillRect(z.x - balkenBreite / 2, z.y - r - 10, balkenBreite, balkenHoehe);
+      // Füllung (grün)
+      ctx.fillStyle = "#84cc16";
+      ctx.fillRect(z.x - balkenBreite / 2, z.y - r - 10, balkenBreite * prozent, balkenHoehe);
+      ctx.restore();
+    }
+  }
+}
+
+// Spielfigur zeichnen
 function topDownFigurZeichnen(f, istEigenerSpieler) {
   const x = f.x;
   const y = f.y;
@@ -546,13 +781,10 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
   ctx.save();
   ctx.translate(x, y);
 
-  // 1. Taschenlampen-Lichtkegel nach vorne
   taschenlampeZeichnen(winkel);
-
-  // In Zielrichtung drehen
   ctx.rotate(winkel);
 
-  // 2. Mündungsfeuer (kurzer heller Lichtblitz beim Schuss)
+  // Mündungsfeuer
   if (f.muendungsfeuer && f.muendungsfeuer > 0) {
     ctx.save();
     ctx.fillStyle = "#fbbf24";
@@ -569,20 +801,20 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
     f.muendungsfeuer--;
   }
 
-  // 3. Waffe (Gewehr / Pistole ragt nach vorne)
+  // Waffe
   ctx.fillStyle = Spieleinstellungen.spieler.waffenFarbe;
-  ctx.fillRect(r * 0.4, -3, 20, 6); // Waffenlauf
+  ctx.fillRect(r * 0.4, -3, 20, 6);
   ctx.fillStyle = "#1e293b";
-  ctx.fillRect(r * 0.3, -4, 10, 8); // Verschluss
+  ctx.fillRect(r * 0.3, -4, 10, 8);
 
-  // 4. Hände
+  // Hände
   ctx.fillStyle = farbe;
   ctx.beginPath();
   ctx.arc(r * 0.7, -7, 5, 0, Math.PI * 2);
   ctx.arc(r * 0.7, 7, 5, 0, Math.PI * 2);
   ctx.fill();
 
-  // 5. Körper (Torso)
+  // Körper
   if (istEigenerSpieler) {
     ctx.shadowColor = farbe;
     ctx.shadowBlur = 10;
@@ -596,7 +828,7 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
   ctx.lineWidth = istEigenerSpieler ? 2 : 1;
   ctx.stroke();
 
-  // Kopf (Helm)
+  // Kopf
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#1e293b";
   ctx.beginPath();
@@ -608,7 +840,7 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
 
   ctx.restore();
 
-  // 6. Namensschild
+  // Namensschild
   ctx.save();
   ctx.font = "bold 11px sans-serif";
   ctx.textAlign = "center";
@@ -620,7 +852,6 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
   ctx.restore();
 }
 
-// Zeichnet den Taschenlampen-Lichtkegel
 function taschenlampeZeichnen(winkel) {
   const laenge = Spieleinstellungen.design.taschenlampeLaenge;
   const halberWinkel = Spieleinstellungen.design.taschenlampeWinkel / 2;
@@ -641,11 +872,29 @@ function taschenlampeZeichnen(winkel) {
   ctx.restore();
 }
 
-// 8. Zeichnet die virtuellen Touch-Joysticks auf dem Smartphone
+// Todesanzeige & Respawn
+function totenBildschirmZeichnen() {
+  ctx.save();
+  ctx.fillStyle = "rgba(239, 68, 68, 0.35)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.font = "bold 24px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+  ctx.shadowBlur = 8;
+  ctx.fillText("💀 Du wurdest von den Zombies erwischt!", canvas.width / 2, canvas.height / 2 - 10);
+
+  ctx.font = "14px sans-serif";
+  ctx.fillStyle = "#e2e8f0";
+  ctx.fillText("Respawn in Kürze...", canvas.width / 2, canvas.height / 2 + 20);
+  ctx.restore();
+}
+
+// Touch-Joysticks
 function touchSteuerungZeichnen() {
   const cfg = Spieleinstellungen.touch;
 
-  // Linker Joystick (Bewegung)
   if (bewegungsJoystick.aktiv) {
     ctx.save();
     ctx.strokeStyle = "rgba(59, 130, 246, 0.5)";
@@ -663,7 +912,6 @@ function touchSteuerungZeichnen() {
     ctx.restore();
   }
 
-  // Rechter Joystick (Zielen & Schießen)
   if (zielJoystick.aktiv) {
     ctx.save();
     ctx.strokeStyle = "rgba(239, 68, 68, 0.6)";
@@ -674,7 +922,6 @@ function touchSteuerungZeichnen() {
     ctx.fill();
     ctx.stroke();
 
-    // Fadenkreuz
     ctx.strokeStyle = "rgba(239, 68, 68, 0.8)";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -691,7 +938,6 @@ function touchSteuerungZeichnen() {
     ctx.restore();
   }
 
-  // Orientierungshinweise für Touch-Gamer
   if (istTouchGeraet && !bewegungsJoystick.aktiv && !zielJoystick.aktiv) {
     ctx.save();
     ctx.font = "12px sans-serif";
@@ -707,6 +953,7 @@ function touchSteuerungZeichnen() {
 function gameLoop() {
   spielerAktualisieren();
   projektileAktualisieren();
+  partikelAktualisieren();
   zeichnen();
   requestAnimationFrame(gameLoop);
 }

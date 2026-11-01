@@ -23,13 +23,24 @@
 
   <!-- Dezentes HUD (Head-Up-Display) über dem Spielfeld -->
   <div class="hud-oberflaeche">
-    <!-- Links oben: Titel, Spieler-Zähler & Serverstatus -->
+    <!-- Links oben: Titel, Lebensbalken, Spieler-Zähler & Serverstatus -->
     <div class="hud-gruppe links-oben">
       <span class="spiel-titel">🧟 Zombie Koop</span>
-      <span class="spieler-badge" id="spieler-anzahl">1 Spieler online</span>
+      
+      <!-- Lebensbalken -->
+      <div class="leben-container">
+        <span class="leben-icon">❤️</span>
+        <div class="leben-balken-rahmen">
+          <div class="leben-balken-fuellung" id="spieler-leben-fuellung"></div>
+        </div>
+        <span class="leben-text" id="spieler-leben-text">100</span>
+      </div>
+
+      <span class="zombie-badge" id="zombie-anzahl">🧟 0</span>
+      <span class="spieler-badge" id="spieler-anzahl">1 Spieler</span>
       <div class="status-bereich" id="multiplayer-status">
         <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
-        <span class="status-text" id="multiplayer-status-text">Verbinde...</span>
+        <span class="status-text" id="multiplayer-status-text">Online</span>
       </div>
     </div>
 

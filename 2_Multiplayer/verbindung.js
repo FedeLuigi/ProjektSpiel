@@ -11,6 +11,11 @@ class MultiplayerVerbindung {
     // Callback-Funktionen
     this.onInitialisiert = callbacks.onInitialisiert || null;
     this.onSchussEmpfangen = callbacks.onSchussEmpfangen || null;
+    this.onZombiesAktualisiert = callbacks.onZombiesAktualisiert || null;
+    this.onZombieGestorben = callbacks.onZombieGestorben || null;
+    this.onZombieVerletzt = callbacks.onZombieVerletzt || null;
+    this.onSpielerSchaden = callbacks.onSpielerSchaden || null;
+    this.onSpielerRespawn = callbacks.onSpielerRespawn || null;
 
     this.initialisieren();
   }
@@ -88,6 +93,38 @@ class MultiplayerVerbindung {
         }
       });
 
+      // 7. Zombie-Synchronisation (Koop-Kampf)
+      this.socket.on("zombiesAktualisiert", (zombiePaket) => {
+        if (typeof this.onZombiesAktualisiert === "function") {
+          this.onZombiesAktualisiert(zombiePaket);
+        }
+      });
+
+      this.socket.on("zombieVerletzt", (daten) => {
+        if (typeof this.onZombieVerletzt === "function") {
+          this.onZombieVerletzt(daten);
+        }
+      });
+
+      this.socket.on("zombieGestorben", (daten) => {
+        if (typeof this.onZombieGestorben === "function") {
+          this.onZombieGestorben(daten);
+        }
+      });
+
+      // 8. Spieler-Schaden & Respawn
+      this.socket.on("spielerSchaden", (daten) => {
+        if (typeof this.onSpielerSchaden === "function") {
+          this.onSpielerSchaden(daten);
+        }
+      });
+
+      this.socket.on("spielerRespawn", (daten) => {
+        if (typeof this.onSpielerRespawn === "function") {
+          this.onSpielerRespawn(daten);
+        }
+      });
+
     } catch (fehler) {
       console.error("[Multiplayer] Verbindungsfehler:", fehler);
       this.statusAktualisieren(false, "Fehler");
@@ -114,6 +151,12 @@ class MultiplayerVerbindung {
   sendeSchuss(schussDaten) {
     if (!this.istVerbunden || !this.socket) return;
     this.socket.emit("schussAbfeuern", schussDaten);
+  }
+
+  // Sendet einen Projektiltreffer auf einen Zombie an den Server
+  sendeZombieTreffer(zombieId, schaden, trefferX, trefferY) {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("zombieTreffer", { zombieId, schaden, trefferX, trefferY });
   }
 
   // Gibt alle anderen verbundenen Spieler als Array zurück

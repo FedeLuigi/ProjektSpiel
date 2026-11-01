@@ -7,9 +7,22 @@ const Spieleinstellungen = {
     breite: 36,              // Für Kollisionsbox
     hoehe: 36,
     geschwindigkeit: 4.5,    // Pixel pro Frame
+    maxHp: 100,              // Maximale Lebenspunkte
     standardFarbe: "#3b82f6",
     waffenFarbe: "#64748b",
     waffenLaenge: 24         // Abstand von Spielermitte bis Mündung
+  },
+
+  // Einstellungen für die Zombies
+  zombie: {
+    radius: 18,              // Körpergröße des Zombies
+    geschwindigkeit: 2.2,    // Bewegungsgeschwindigkeit
+    maxHp: 30,               // 3 Treffer à 10 Schaden zum Besiegen
+    schaden: 10,             // Schaden pro Biss/Angriff
+    angriffsAbstand: 28,     // Reichweite für Bisse
+    angriffsRate: 1000,      // Millisekunden zwischen Angriffen
+    farbe: "#4d7c0f",        // Verwestes Zombie-Grün
+    augenFarbe: "#ef4444"    // Glühend rote Augen
   },
 
   // Einstellungen für die Waffe & Munition

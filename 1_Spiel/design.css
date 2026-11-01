@@ -70,6 +70,60 @@ canvas#spielFeld {
   border-radius: 20px;
 }
 
+/* Lebensbalken im HUD */
+.leben-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.leben-icon {
+  font-size: 0.85rem;
+}
+
+.leben-balken-rahmen {
+  width: 75px;
+  height: 9px;
+  background: #334155;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid #475569;
+}
+
+.leben-balken-fuellung {
+  width: 100%;
+  height: 100%;
+  background: #22c55e;
+  border-radius: 5px;
+  transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+.leben-text {
+  font-size: 0.75rem;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+  min-width: 24px;
+}
+
+.zombie-badge {
+  background: rgba(54, 83, 20, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(132, 204, 22, 0.5);
+  color: #bef264;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .spieler-badge {
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(6px);
