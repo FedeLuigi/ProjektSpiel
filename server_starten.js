@@ -68,6 +68,7 @@ io.on('connection', (socket) => {
     breite: SPIELER_GROESSE,
     hoehe: SPIELER_GROESSE,
     farbe: farbe,
+    winkel: 0, // Blick- und Zielwinkel in Radiant (0 bis 2*PI)
     blickrichtung: "rechts"
   };
 
@@ -86,11 +87,12 @@ io.on('connection', (socket) => {
   // 4. Spieleranzahl an alle Clients übertragen
   io.emit('spielerAnzahlAktualisiert', Object.keys(alleSpieler).length);
 
-  // 5. Bewegung eines Spielers empfangen und in Echtzeit an alle anderen weiterleiten
+  // 5. Bewegung & Zielwinkel empfangen und in Echtzeit an alle anderen weiterleiten
   socket.on('spielerBewegung', (daten) => {
     if (alleSpieler[socket.id]) {
       alleSpieler[socket.id].x = daten.x;
       alleSpieler[socket.id].y = daten.y;
+      alleSpieler[socket.id].winkel = daten.winkel !== undefined ? daten.winkel : 0;
       alleSpieler[socket.id].blickrichtung = daten.blickrichtung || "rechts";
 
       // An alle anderen verbundenen Spieler weiterleiten
@@ -98,6 +100,7 @@ io.on('connection', (socket) => {
         id: socket.id,
         x: daten.x,
         y: daten.y,
+        winkel: daten.winkel !== undefined ? daten.winkel : 0,
         blickrichtung: daten.blickrichtung || "rechts"
       });
     }

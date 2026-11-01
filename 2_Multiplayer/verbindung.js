@@ -57,11 +57,12 @@ class MultiplayerVerbindung {
         this.andereSpieler[spieler.id] = spieler;
       });
 
-      // 3. Ein Mitspieler hat sich bewegt
+      // 3. Ein Mitspieler hat sich bewegt oder gedreht
       this.socket.on("spielerBewegt", (daten) => {
         if (this.andereSpieler[daten.id]) {
           this.andereSpieler[daten.id].x = daten.x;
           this.andereSpieler[daten.id].y = daten.y;
+          this.andereSpieler[daten.id].winkel = daten.winkel !== undefined ? daten.winkel : 0;
           this.andereSpieler[daten.id].blickrichtung = daten.blickrichtung;
         }
       });
@@ -85,18 +86,19 @@ class MultiplayerVerbindung {
     }
   }
 
-  // Sendet die eigene Position und Blickrichtung an den Server
-  sendeBewegung(x, y, blickrichtung) {
+  // Sendet die eigene Position und den Zielwinkel an den Server
+  sendeBewegung(x, y, winkel, blickrichtung = "rechts") {
     if (!this.istVerbunden || !this.socket) return;
 
-    // Nur senden, wenn sich Koordinaten oder Blickrichtung geändert haben
+    // Nur senden, wenn sich Koordinaten oder Winkel relevant geändert haben
+    const winkelGerundet = Math.round(winkel * 100) / 100;
     if (
       this.letzteGesendeteDaten.x !== x ||
       this.letzteGesendeteDaten.y !== y ||
-      this.letzteGesendeteDaten.blickrichtung !== blickrichtung
+      this.letzteGesendeteDaten.winkel !== winkelGerundet
     ) {
-      this.letzteGesendeteDaten = { x, y, blickrichtung };
-      this.socket.emit("spielerBewegung", { x, y, blickrichtung });
+      this.letzteGesendeteDaten = { x, y, winkel: winkelGerundet, blickrichtung };
+      this.socket.emit("spielerBewegung", { x, y, winkel: winkelGerundet, blickrichtung });
     }
   }
 

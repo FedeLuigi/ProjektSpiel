@@ -29,6 +29,7 @@ canvas#spielFeld {
   width: 100vw;
   height: 100vh;
   background-color: #0d131f;
+  cursor: crosshair; /* Fadenkreuz für präzises Zielen am PC */
 }
 
 /* HUD-Oberfläche (schwebt transparent über dem Spielfeld) */

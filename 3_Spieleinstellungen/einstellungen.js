@@ -1,17 +1,21 @@
 // Zentrale Spieleinstellungen und Konfiguration
 
 const Spieleinstellungen = {
-  // Spielfeld-Dimensionen in Pixeln (zentrale gemeinsame Welt)
-  weltBreite: 800,
-  weltHoehe: 500,
-
   // Einstellungen für die Spielfiguren
   spieler: {
-    breite: 40,
-    hoehe: 40,
-    geschwindigkeit: 5, // Pixel pro Frame
+    radius: 18,              // Top-Down Radius der Figur
+    breite: 36,              // Für Kollisionsbox
+    hoehe: 36,
+    geschwindigkeit: 4.5,    // Pixel pro Frame
     standardFarbe: "#3b82f6",
-    augenFarbe: "#ffffff"
+    waffenFarbe: "#64748b"
+  },
+
+  // Einstellungen für die virtuelle Touch-Steuerung (Smartphones)
+  touch: {
+    joystickRadius: 55,       // Äußerer Ring
+    knaufRadius: 24,          // Innerer beweglicher Punkt
+    maxAuslenkung: 45         // Maximaler Auslenkungsweg
   },
 
   // Farbpalette für automatisch zugewiesene Spielerfarben
@@ -26,11 +30,12 @@ const Spieleinstellungen = {
     "#f97316"  // Orange
   ],
 
-  // Grafisches Design
+  // Grafisches Design (Zombie-Survival Top-Down Atmosphäre)
   design: {
-    hintergrundFarbe: "#1e293b", // Dunkles Schieferblau
-    gitterFarbe: "rgba(255, 255, 255, 0.05)",
-    gitterGroesse: 40,
-    rahmenFarbe: "#3b82f6"
+    hintergrundFarbe: "#0a0f1d", // Sehr dunkle Nacht
+    gitterFarbe: "rgba(255, 255, 255, 0.03)",
+    gitterGroesse: 50,
+    taschenlampeLaenge: 180,    // Reichweite des Lichtkegels
+    taschenlampeWinkel: 0.65    // Streuung des Lichts (~37 Grad)
   }
 };
