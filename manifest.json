@@ -2,13 +2,13 @@
   "name": "SPIELBOX – Spieleplattform",
   "short_name": "SPIELBOX",
   "description": "Die modulare 2D-Multiplayer-Spieleplattform im Browser",
-  "start_url": "/",
+  "start_url": "/0_Spielbox/spielbox.html",
   "scope": "/",
-  "id": "/",
+  "id": "/0_Spielbox/spielbox.html",
   "display": "standalone",
-  "orientation": "any",
-  "background_color": "#0a0f1d",
-  "theme_color": "#0a0f1d",
+  "orientation": "landscape",
+  "background_color": "#070a12",
+  "theme_color": "#070a12",
   "icons": [
     {
       "src": "/0_Spielbox/grafiken/icon-192.png",

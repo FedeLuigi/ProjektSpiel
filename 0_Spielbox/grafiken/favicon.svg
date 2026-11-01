@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c1322"/>
+      <stop offset="100%" stop-color="#070a12"/>
+    </linearGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="controllerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#223046"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Background with Glowing Border -->
+  <rect x="16" y="16" width="480" height="480" rx="110" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="12" />
+
+  <!-- Controller Body -->
+  <g transform="translate(256, 256)" filter="url(#glow)">
+    <!-- Main Chassis -->
+    <path d="M-150,-50 C-120,-85 120,-85 150,-50 C180,-15 210,70 160,110 C130,135 90,80 60,60 C25,45 -25,45 -60,60 C-90,80 -130,135 -160,110 C-210,70 -180,-15 -150,-50 Z" 
+          fill="url(#controllerGrad)" stroke="#334155" stroke-width="5" />
+
+    <!-- D-PAD (Electric Cyan) -->
+    <g transform="translate(-85, 10)">
+      <rect x="-14" y="-36" width="28" height="72" rx="7" fill="#06b6d4" />
+      <rect x="-36" y="-14" width="72" height="28" rx="7" fill="#06b6d4" />
+      <circle cx="0" cy="0" r="6" fill="#0891b2" />
+    </g>
+
+    <!-- ACTION BUTTONS (4 Diamond Colors) -->
+    <g transform="translate(85, 10)">
+      <!-- Top: Emerald -->
+      <circle cx="0" cy="-26" r="14" fill="#10b981" />
+      <!-- Right: Pink -->
+      <circle cx="26" cy="0" r="14" fill="#ec4899" />
+      <!-- Bottom: Amber -->
+      <circle cx="0" cy="26" r="14" fill="#f59e0b" />
+      <!-- Left: Blue -->
+      <circle cx="-26" cy="0" r="14" fill="#3b82f6" />
+    </g>
+
+    <!-- Center Jewel (SPIELBOX Indicator) -->
+    <circle cx="0" cy="-12" r="16" fill="#10b981" />
+    <circle cx="0" cy="-12" r="8" fill="#a7f3d0" />
+  </g>
+
+  <!-- Text Badge -->
+  <text x="256" y="435" text-anchor="middle" font-family="system-ui, sans-serif" font-size="34" font-weight="900" letter-spacing="8" fill="#f8fafc">SPIELBOX</text>
+</svg>

@@ -35,6 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const installAnleitungAndroid = document.getElementById('install-anleitung-android');
   const androidInstallActionBtn = document.getElementById('android-install-action-btn');
 
+  // Automatische Querformat-Aktivierung (Landscape) ohne störende Hinweise
+  function querformatAktivieren() {
+    try {
+      if (screen.orientation && typeof screen.orientation.lock === 'function') {
+        screen.orientation.lock('landscape').catch(() => {});
+      }
+    } catch (e) {}
+  }
+
+  querformatAktivieren();
+  window.addEventListener('click', querformatAktivieren, { once: true });
+  window.addEventListener('touchstart', querformatAktivieren, { once: true, passive: true });
+
   // 1. Profil & Name initialisieren
   function nameAktualisieren() {
     const aktuellerName = PlattformSpeicher.getSpielerName();

@@ -8,19 +8,20 @@
   <!-- Apple iOS Web-App (PWA) Einstellungen für Vollbild ohne Safari-Leisten -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ZombieKoop">
+  <meta name="apple-mobile-web-app-title" content="SPIELBOX">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#070a12">
   <meta name="format-detection" content="telephone=no">
 
-  <!-- PWA Icons und Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/1_Spiel/favicon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/1_Spiel/apple-touch-icon.png">
-  <link rel="apple-touch-icon" href="/1_Spiel/apple-touch-icon.png">
+  <!-- PWA Icons und Favicon der SPIELBOX -->
+  <link rel="icon" type="image/svg+xml" href="/0_Spielbox/grafiken/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/0_Spielbox/grafiken/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/0_Spielbox/grafiken/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="/0_Spielbox/grafiken/apple-touch-icon.png">
 
   <!-- Web-App-Manifest -->
   <link rel="manifest" href="/manifest.json">
-  <title>Zombie Koop 2D</title>
+  <title>Zombie Koop 2D – SPIELBOX</title>
   <link rel="stylesheet" href="design.css">
 </head>
 <body>
@@ -38,6 +39,11 @@
         </div>
       </div>
       <div class="kopf-aktionen">
+        <div class="menue-profil-badge" title="Dein Funk-Rufname">
+          <span class="profil-badge-label">Funkname:</span>
+          <span class="profil-badge-wert" id="menue-spieler-name-badge">Spieler</span>
+          <button id="menue-name-einstellungen-btn" class="mini-icon-btn" title="Namen in den Einstellungen ändern" aria-label="Einstellungen">⚙️</button>
+        </div>
         <a href="/0_Spielbox/spielbox.html" class="zurueck-nav-btn plattform-zurueck-btn" title="Zurück zur SPIELBOX" style="text-decoration: none;">
           <span class="nav-pfeil">🎮</span>
           <span>SPIELBOX</span>
@@ -49,41 +55,48 @@
     </header>
 
     <div class="hauptmenue-koerper">
-      <!-- Linke Spalte: Überlebenden-Profil & Einstellungen -->
+      <!-- Linke Spalte: Koop-Briefing & Profilstatus -->
       <section class="menue-spalte links">
-        <div class="profil-bereich">
-          <h2 class="abschnitt-titel">👤 Dein Überlebender</h2>
-          <label for="spieler-name-input" class="feld-label">Wähle deinen Funk-Rufnamen:</label>
-          <div class="eingabe-zeile">
-            <input type="text" id="spieler-name-input" class="vollbild-input" placeholder="Spielername..." maxlength="16" autocomplete="off">
-            <button id="zufalls-name-btn" class="icon-quadrat-btn" title="Zufälliger Name" aria-label="Zufallsname">🎲</button>
+        <div class="spiel-briefing-kasten">
+          <div class="briefing-icon-zeile">
+            <span class="briefing-icon">🧟</span>
+            <span class="briefing-badge">1 – 6 Spieler Koop</span>
           </div>
-          <p class="profil-hinweis">Dein Name wird automatisch für deine nächsten Runden gespeichert.</p>
-        </div>
-
-        <div class="steuerung-vorschau">
-          <span class="vorschau-titel">🎮 Steuerung</span>
-          <p><strong>PC:</strong> <kbd>WASD</kbd> Bewegen • <kbd>Maus</kbd> Zielen • <kbd>Klick</kbd> Schießen</p>
-          <p><strong>Smartphone:</strong> Links Laufen • Rechts Zielen & Feuern</p>
+          <h2 class="briefing-titel">Überlebe die Horden</h2>
+          <p class="briefing-text">
+            Kämpfe gemeinsam mit deinen Mitspielern gegen endlose Zombie-Wellen. 
+            Teile deinen Einladungscode oder tritt einer offenen Runde bei!
+          </p>
+          <div class="briefing-features">
+            <span class="feature-tag">⚡ Echtzeit-Multiplayer</span>
+            <span class="feature-tag">🛡️ 2s Respawn-Schutz</span>
+            <span class="feature-tag">📱 PC & Smartphone</span>
+          </div>
         </div>
       </section>
 
-      <!-- Rechte Spalte: Spielmodi (Große Vollbild-Buttons) -->
+      <!-- Rechte Spalte: Spielmodi im einheitlichen SPIELBOX-Design -->
       <section class="menue-spalte rechts">
-        <button id="nav-raum-erstellen-btn" class="auswahl-kachel gruen">
-          <div class="kachel-icon">➕</div>
+        <button id="nav-raum-erstellen-btn" class="plattform-auswahl-karte gruen">
+          <div class="kachel-icon-kasten">➕</div>
           <div class="kachel-info">
-            <span class="kachel-ueberschrift">Spielraum erstellen</span>
-            <span class="kachel-beschreibung">Eröffne eine neue Lobby als Raumleiter und lade Freunde per Code oder Link ein.</span>
+            <div class="kachel-titel-zeile">
+              <span class="kachel-ueberschrift">Spielraum erstellen</span>
+              <span class="kachel-badge gruen">👑 Sofort-Start</span>
+            </div>
+            <span class="kachel-beschreibung">Eröffne direkt eine neue Multiplayer-Lobby als Raumleiter und lade Freunde ein.</span>
           </div>
           <div class="kachel-pfeil">➔</div>
         </button>
 
-        <button id="nav-raum-beitreten-btn" class="auswahl-kachel blau">
-          <div class="kachel-icon">🚪</div>
+        <button id="nav-raum-beitreten-btn" class="plattform-auswahl-karte blau">
+          <div class="kachel-icon-kasten">🚪</div>
           <div class="kachel-info">
-            <span class="kachel-ueberschrift">Spielraum beitreten</span>
-            <span class="kachel-beschreibung">Tritt einer bestehenden Gruppe mit einem 5-stelligen Einladungscode bei.</span>
+            <div class="kachel-titel-zeile">
+              <span class="kachel-ueberschrift">Spielraum beitreten</span>
+              <span class="kachel-badge blau">🔑 Code</span>
+            </div>
+            <span class="kachel-beschreibung">Tritt einer bestehenden Runde deiner Mitspieler mit dem 5-stelligen Einladungscode bei.</span>
           </div>
           <div class="kachel-pfeil">➔</div>
         </button>
