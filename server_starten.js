@@ -109,6 +109,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 5b. Spielernamen ändern & an alle im Raum synchronisieren
+  socket.on('spielerNameAendern', (daten) => {
+    const ergebnis = raumVerwaltung.spielerNameAendern(socket.id, daten?.neuerName);
+    if (ergebnis) {
+      io.to(ergebnis.raum.code).emit('spielerNameGeaendert', {
+        id: socket.id,
+        name: ergebnis.bereinigterName
+      });
+      io.to(ergebnis.raum.code).emit('lobbyAktualisiert', raumVerwaltung.getLobbyPaket(ergebnis.raum));
+    }
+  });
+
   // 6. Spielerbewegung synchronisieren (nur innerhalb des jeweiligen Raums)
   socket.on('spielerBewegung', (daten) => {
     const raum = raumVerwaltung.getRaumVonSocket(socket.id);

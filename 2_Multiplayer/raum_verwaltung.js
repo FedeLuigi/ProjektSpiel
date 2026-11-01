@@ -244,6 +244,20 @@ function getAlleRaeume() {
   return raeume;
 }
 
+// Ändert den Spielernamen und aktualisiert den Raum
+function spielerNameAendern(socketId, neuerName) {
+  const raum = getRaumVonSocket(socketId);
+  if (!raum || !raum.spieler[socketId]) return null;
+
+  const bereinigterName = (neuerName && neuerName.trim())
+    ? neuerName.trim().substring(0, 16)
+    : `Überlebender #${socketId.substring(0, 4)}`;
+
+  raum.spieler[socketId].name = bereinigterName;
+  console.log(`[Raum ${raum.code}] Spieler ${socketId} heißt jetzt: ${bereinigterName}`);
+  return { raum, bereinigterName };
+}
+
 module.exports = {
   raumErstellen,
   raumBeitreten,
@@ -251,6 +265,7 @@ module.exports = {
   sindAlleSpielerBereit,
   rundeStarten,
   spielerEntfernen,
+  spielerNameAendern,
   getRaumVonSocket,
   getRaum,
   getLobbyPaket,

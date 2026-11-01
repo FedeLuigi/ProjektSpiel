@@ -234,9 +234,8 @@
 
   <!-- In-Game HUD über dem Spielfeld -->
   <div class="hud-oberflaeche versteckt" id="spiel-hud">
-    <!-- Links oben: Titel, Level, Lebensbalken, Zombie-Zähler & Spieler -->
+    <!-- Links oben: Level, Lebensbalken, Zombie-Zähler & Munition -->
     <div class="hud-gruppe links-oben">
-      <span class="spiel-titel">🧟 Zombie Koop</span>
       <span class="level-badge" id="level-anzeige">🏆 Level 1</span>
       
       <!-- Lebensbalken -->
@@ -248,21 +247,21 @@
         <span class="leben-text" id="spieler-leben-text">100</span>
       </div>
 
+      <!-- Verbleibende Zombies -->
       <span class="zombie-badge" id="zombie-anzahl">🧟 8 übrig</span>
-      <span class="spieler-badge" id="spieler-anzahl">1 Spieler</span>
-      <div class="status-bereich" id="multiplayer-status">
-        <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
-        <span class="status-text" id="multiplayer-status-text">Online</span>
+
+      <!-- Munitionsanzeige -->
+      <div class="munition-container" id="munition-anzeige" title="Munition">
+        <span class="munition-icon">🔫</span>
+        <span class="munition-text" id="munition-text">∞</span>
       </div>
     </div>
 
-    <!-- Rechts oben: Koordinaten, Verlassen-Button & PC-Steuerung -->
+    <!-- Rechts oben: Unauffälliges Zahnradsymbol für Einstellungen -->
     <div class="hud-gruppe rechts-oben">
-      <button id="spiel-verlassen-btn" class="app-install-btn rot" title="Spiel verlassen und zur Lobby zurückkehren">
-        🚪 Verlassen
+      <button id="einstellungen-oeffnen-btn" class="zahnrad-btn" aria-label="Einstellungen öffnen" title="Einstellungen">
+        <span class="zahnrad-icon">⚙️</span>
       </button>
-      <div class="position-info" id="spieler-pos">X: 0 | Y: 0</div>
-      <div class="pc-steuerung-info">PC: <kbd>WASD</kbd> | <kbd>Maus 🎯</kbd> | <kbd>Klick 💥</kbd></div>
     </div>
   </div>
 
@@ -271,6 +270,200 @@
     <div class="banner-inhalt">
       <h2 id="welle-banner-titel">LEVEL 1</h2>
       <p id="welle-banner-untertitel">Überlebe die Zombie-Welle!</p>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       6. EINSTELLUNGSMENÜ & BESTÄTIGUNG (Modal)
+       ======================================================== -->
+  <div id="einstellungen-modal" class="einstellungen-modal versteckt">
+    <div class="einstellungen-kasten">
+      <!-- Kopfzeile mit Titel & Schließen-Button -->
+      <div class="einstellungen-kopf">
+        <div class="einstellungen-kopf-titel">
+          <span class="kopf-icon">⚙️</span>
+          <h2>Einstellungen</h2>
+        </div>
+        <button id="einstellungen-schliessen-btn" class="modal-schliessen-btn" aria-label="Einstellungen schließen" title="Zurück zum Spiel">&times;</button>
+      </div>
+
+      <!-- Tab-Navigation -->
+      <div class="einstellungen-tabs">
+        <button class="tab-btn aktiv" data-tab="tab-spielraum">🚪 Spielraum</button>
+        <button class="tab-btn" data-tab="tab-audio">🔊 Audio</button>
+        <button class="tab-btn" data-tab="tab-spieler">👤 Spieler</button>
+        <button class="tab-btn" data-tab="tab-anleitung">📖 Anleitung</button>
+        <button class="tab-btn" data-tab="tab-optionen">🎮 Optionen</button>
+      </div>
+
+      <!-- Tab-Inhalte -->
+      <div class="einstellungen-tab-inhalte">
+        <!-- Tab 1: Spielraum -->
+        <div class="tab-inhalt aktiv" id="tab-spielraum">
+          <div class="einstellung-sektion">
+            <h3>Aktueller Spielraum</h3>
+            <p class="sektion-beschreibung">Hier kannst du deine Raumdetails einsehen oder den aktuellen Spielraum verlassen.</p>
+            
+            <div class="einstellung-info-karten">
+              <div class="einstellung-info-feld">
+                <span class="info-label">Raumcode:</span>
+                <span class="info-wert" id="einstellungen-raumcode-wert">-----</span>
+              </div>
+              <div class="einstellung-info-feld">
+                <span class="info-label">Status:</span>
+                <span class="info-wert gruen">Im Gefecht</span>
+              </div>
+            </div>
+
+            <div class="sektion-trenner"></div>
+
+            <button id="einstellungen-raum-verlassen-btn" class="menue-aktion-btn rot-leuchtend">
+              🚪 Spielraum verlassen
+            </button>
+          </div>
+        </div>
+
+        <!-- Tab 2: Audio -->
+        <div class="tab-inhalt versteckt" id="tab-audio">
+          <div class="einstellung-sektion">
+            <h3>Sound & Musik</h3>
+            
+            <div class="einstellung-zeile">
+              <div class="zeile-info">
+                <span class="zeile-titel">Hintergrundmusik</span>
+                <span class="zeile-sub">Atmosphärischer Zombie-Survival-Soundtrack</span>
+              </div>
+              <label class="schalter">
+                <input type="checkbox" id="einstellung-musik" checked>
+                <span class="schieber"></span>
+              </label>
+            </div>
+
+            <div class="einstellung-zeile">
+              <div class="zeile-info">
+                <span class="zeile-titel">Soundeffekte</span>
+                <span class="zeile-sub">Schuss-, Treffer- und Zombie-Geräusche</span>
+              </div>
+              <label class="schalter">
+                <input type="checkbox" id="einstellung-sound" checked>
+                <span class="schieber"></span>
+              </label>
+            </div>
+
+            <div class="einstellung-zeile vertikal">
+              <div class="regler-kopf">
+                <span class="zeile-titel">Gesamtlautstärke</span>
+                <span class="regler-wert" id="lautstaerke-wert">80 %</span>
+              </div>
+              <input type="range" id="einstellung-lautstaerke" min="0" max="100" value="80" class="bereichs-regler">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Spieler -->
+        <div class="tab-inhalt versteckt" id="tab-spieler">
+          <div class="einstellung-sektion">
+            <h3>Überlebender</h3>
+            <p class="sektion-beschreibung">Ändere deinen Spielernamen. Die Änderung wird sofort für alle Mitspieler im Raum synchronisiert.</p>
+            
+            <div class="einstellung-zeile vertikal">
+              <label for="einstellung-spieler-name" class="eingabe-label">Aktueller Spielername:</label>
+              <div class="eingabe-mit-btn">
+                <input type="text" id="einstellung-spieler-name" class="modal-text-input" maxlength="15" placeholder="Dein Spielername">
+                <button id="einstellung-name-speichern-btn" class="menue-aktion-btn gruen">
+                  💾 Speichern
+                </button>
+              </div>
+              <span id="einstellung-name-feedback" class="feedback-text versteckt">✓ Name erfolgreich aktualisiert!</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Spielanleitung -->
+        <div class="tab-inhalt versteckt" id="tab-anleitung">
+          <div class="einstellung-sektion scrollbar-fein anleitung-bereich">
+            <!-- PC Steuerung -->
+            <div class="anleitung-kategorie">
+              <h4>💻 Steuerung auf dem PC</h4>
+              <ul class="anleitung-liste">
+                <li><strong>Bewegen:</strong> Verwende <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> oder die Pfeiltasten, um dich zu bewegen.</li>
+                <li><strong>Zielen & Drehen:</strong> Bewege die <strong>Maus</strong>. Deine Figur schaut und leuchtet in Mausrichtung.</li>
+                <li><strong>Schießen:</strong> Drücke die <strong>linke Maustaste</strong>, um deine Waffe abzufeuern.</li>
+              </ul>
+            </div>
+
+            <!-- Smartphone Steuerung -->
+            <div class="anleitung-kategorie">
+              <h4>📱 Steuerung auf Smartphones</h4>
+              <ul class="anleitung-liste">
+                <li><strong>Bewegen:</strong> Berühre die <strong>linke Bildschirmhälfte</strong> und ziehe wie mit einem Joystick zum Laufen.</li>
+                <li><strong>Zielen & Schießen:</strong> Berühre die <strong>rechte Bildschirmhälfte</strong> und ziehe in Schussrichtung.</li>
+              </ul>
+            </div>
+
+            <!-- Gameplay & Taktik -->
+            <div class="anleitung-kategorie">
+              <h4>🧟 Zombies bekämpfen & Wellen</h4>
+              <ul class="anleitung-liste">
+                <li><strong>Abstand halten:</strong> Zombies versuchen dich im Nahkampf zu beißen. Laufe rückwärts feuernd weg (Kiting).</li>
+                <li><strong>Teamwork:</strong> Bleibt zusammen! Mehrere Spieler können Zombies deutlich schneller ausschalten.</li>
+                <li><strong>Wellen & Level:</strong> Mit jedem Level kommen mehr und gefährlichere Zombies.</li>
+                <li><strong>Heilung:</strong> Nach jeder gemeisterten Welle gibt es eine kurze Pause und du wirst automatisch geheilt!</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 5: Weitere Einstellungen -->
+        <div class="tab-inhalt versteckt" id="tab-optionen">
+          <div class="einstellung-sektion">
+            <h3>Steuerung & Grafik</h3>
+
+            <div class="einstellung-zeile vertikal">
+              <div class="regler-kopf">
+                <span class="zeile-titel">Steuerungsempfindlichkeit</span>
+                <span class="regler-wert" id="empfindlichkeit-wert">100 %</span>
+              </div>
+              <input type="range" id="einstellung-empfindlichkeit" min="50" max="150" value="100" class="bereichs-regler">
+            </div>
+
+            <div class="einstellung-zeile">
+              <div class="zeile-info">
+                <span class="zeile-titel">Blut- & Treffereffekte</span>
+                <span class="zeile-sub">Partikel und Flecken auf dem Boden bei Treffern</span>
+              </div>
+              <label class="schalter">
+                <input type="checkbox" id="einstellung-blut" checked>
+                <span class="schieber"></span>
+              </label>
+            </div>
+
+            <div class="einstellung-zeile">
+              <div class="zeile-info">
+                <span class="zeile-titel">Taschenlampen-Lichtkegel</span>
+                <span class="zeile-sub">Atmosphärisches Nachtlicht um deine Spielfigur</span>
+              </div>
+              <label class="schalter">
+                <input type="checkbox" id="einstellung-licht" checked>
+                <span class="schieber"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bestätigungsdialog: Raum verlassen -->
+  <div id="raum-verlassen-dialog" class="einstellungen-modal dialog-overlay versteckt">
+    <div class="dialog-kasten">
+      <div class="dialog-icon">⚠️</div>
+      <h3>Spielraum wirklich verlassen?</h3>
+      <p class="dialog-text">Du wirst aus der laufenden Runde abgemeldet und kehrst zum Hauptmenü zurück. Deine Mitspieler bleiben im Raum.</p>
+      <div class="dialog-aktionen">
+        <button id="dialog-abbrechen-btn" class="sekundaer-text-btn">Abbrechen</button>
+        <button id="dialog-bestaetigen-btn" class="menue-aktion-btn rot-leuchtend">Ja, verlassen</button>
+      </div>
     </div>
   </div>
 

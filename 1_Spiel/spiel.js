@@ -112,6 +112,50 @@ let lobbyStartenBtn = null;
 let lobbyLeiterStatusText = null;
 let spielVerlassenBtn = null;
 
+// Einstellungsmenü & Pause-Zustand
+let einstellungenGeoeffnet = false;
+let einstellungenModal = null;
+let einstellungenOeffnenBtn = null;
+let einstellungenSchliessenBtn = null;
+let einstellungenTabs = [];
+let einstellungenTabInhalte = [];
+let einstellungenRaumcodeWert = null;
+let einstellungenRaumVerlassenBtn = null;
+let raumVerlassenDialog = null;
+let dialogAbbrechenBtn = null;
+let dialogBestaetigenBtn = null;
+
+let einstellungMusik = null;
+let einstellungSound = null;
+let einstellungLautstaerke = null;
+let lautstaerkeWert = null;
+
+let einstellungSpielerName = null;
+let einstellungNameSpeichernBtn = null;
+let einstellungNameFeedback = null;
+
+let einstellungEmpfindlichkeit = null;
+let empfindlichkeitWert = null;
+let einstellungBlut = null;
+let einstellungLicht = null;
+
+// Benutzer-Einstellungen und lokale Speicherung
+const SPEICHER_SCHLUESSEL_EINSTELLUNGEN = "zombie_einstellungen";
+const standardEinstellungen = {
+  musik: true,
+  sound: true,
+  lautstaerke: 80,
+  empfindlichkeit: 100,
+  blutEffekte: true,
+  taschenlampe: true
+};
+let benutzerEinstellungen = { ...standardEinstellungen };
+
+// Audio Gain-Nodes für Musik und Soundeffekte
+let sfxGainNode = null;
+let musikGainNode = null;
+let musikQuelleNode = null;
+
 let aktuellerZustand = "hauptmenue"; // "hauptmenue" | "raum-erstellen" | "raum-beitreten" | "lobby" | "spiel"
 let toastTimer = null;
 
@@ -159,6 +203,10 @@ function beitretenFehlerVerstecken() {
 // Zentrale Seitenansichten-Umschaltung: Ersetzt die vorherige Ansicht vollständig
 function ansichtWechseln(zustand) {
   aktuellerZustand = zustand;
+
+  if (zustand !== "spiel") {
+    einstellungenSchliessen();
+  }
 
   if (ansichtHauptmenue) ansichtHauptmenue.classList.toggle("versteckt", zustand !== "hauptmenue");
   if (ansichtRaumErstellen) ansichtRaumErstellen.classList.toggle("versteckt", zustand !== "raum-erstellen");
@@ -342,6 +390,37 @@ function spielStarten() {
 
   // In-Game Verlassen-Button
   spielVerlassenBtn = document.getElementById("spiel-verlassen-btn");
+
+  // Einstellungsmenü & Modal-Elemente
+  einstellungenOeffnenBtn = document.getElementById("einstellungen-oeffnen-btn");
+  einstellungenModal = document.getElementById("einstellungen-modal");
+  einstellungenSchliessenBtn = document.getElementById("einstellungen-schliessen-btn");
+  einstellungenTabs = Array.from(document.querySelectorAll(".einstellungen-tabs .tab-btn"));
+  einstellungenTabInhalte = Array.from(document.querySelectorAll(".tab-inhalt"));
+  einstellungenRaumcodeWert = document.getElementById("einstellungen-raumcode-wert");
+  einstellungenRaumVerlassenBtn = document.getElementById("einstellungen-raum-verlassen-btn");
+  raumVerlassenDialog = document.getElementById("raum-verlassen-dialog");
+  dialogAbbrechenBtn = document.getElementById("dialog-abbrechen-btn");
+  dialogBestaetigenBtn = document.getElementById("dialog-bestaetigen-btn");
+
+  einstellungMusik = document.getElementById("einstellung-musik");
+  einstellungSound = document.getElementById("einstellung-sound");
+  einstellungLautstaerke = document.getElementById("einstellung-lautstaerke");
+  lautstaerkeWert = document.getElementById("lautstaerke-wert");
+
+  einstellungSpielerName = document.getElementById("einstellung-spieler-name");
+  einstellungNameSpeichernBtn = document.getElementById("einstellung-name-speichern-btn");
+  einstellungNameFeedback = document.getElementById("einstellung-name-feedback");
+
+  einstellungEmpfindlichkeit = document.getElementById("einstellung-empfindlichkeit");
+  empfindlichkeitWert = document.getElementById("empfindlichkeit-wert");
+  einstellungBlut = document.getElementById("einstellung-blut");
+  einstellungLicht = document.getElementById("einstellung-licht");
+
+  // Einstellungen laden, anwenden und Event-Listener verknüpfen
+  einstellungenLaden();
+  einstellungenAnwenden();
+  einstellungenInitialisieren();
 
   // Vollbild initialisieren
   bildschirmGroesseAnpassen();
@@ -560,6 +639,13 @@ function spielStarten() {
       toastZeigen(`👑 Neuer Raumleiter: ${daten.leiterName}`, 3500);
     },
 
+    onSpielerNameGeaendert: (daten) => {
+      console.log(`[Multiplayer] Spieler ${daten.id} heißt jetzt "${daten.name}"`);
+      if (multiplayerVerbindung && multiplayerVerbindung.aktuelleLobby) {
+        lobbyRendern(multiplayerVerbindung.aktuelleLobby);
+      }
+    },
+
     onSpielGestartet: (daten) => {
       ansichtWechseln("spiel");
       spieler.hp = 100;
@@ -676,7 +762,7 @@ function bildschirmGroesseAnpassen() {
   spieler.y = Math.max(spieler.radius, Math.min(canvas.height - spieler.radius, spieler.y));
 }
 
-// 3. Audio-Synthese: Knackiger Schuss & Treffersound
+// 3. Audio-Synthese: Knackiger Schuss, Treffersound & Ambient-Musik
 function audioInitialisieren() {
   if (!audioKontext) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -687,11 +773,83 @@ function audioInitialisieren() {
   if (audioKontext && audioKontext.state === "suspended") {
     audioKontext.resume();
   }
+  if (audioKontext) {
+    audioSystemEinrichten();
+  }
+}
+
+// Erstellt Gain-Nodes für Lautstärkeregelung und schaltet Musik/SFX
+function audioSystemEinrichten() {
+  if (!audioKontext) return;
+
+  if (!sfxGainNode) {
+    sfxGainNode = audioKontext.createGain();
+    sfxGainNode.connect(audioKontext.destination);
+  }
+
+  if (!musikGainNode) {
+    musikGainNode = audioKontext.createGain();
+    musikGainNode.connect(audioKontext.destination);
+  }
+
+  lautstaerkeAktualisieren();
+  hintergrundMusikAktualisieren();
+}
+
+function lautstaerkeAktualisieren() {
+  if (!audioKontext) return;
+  const masterFaktor = Math.max(0, Math.min(1, (benutzerEinstellungen.lautstaerke || 0) / 100));
+
+  if (sfxGainNode) {
+    const sfxPegel = benutzerEinstellungen.sound ? masterFaktor : 0;
+    sfxGainNode.gain.setValueAtTime(sfxPegel, audioKontext.currentTime);
+  }
+
+  if (musikGainNode) {
+    const musikPegel = benutzerEinstellungen.musik ? (masterFaktor * 0.16) : 0;
+    musikGainNode.gain.setValueAtTime(musikPegel, audioKontext.currentTime);
+  }
+}
+
+// Düsterer Ambient-Soundtrack für atmosphärisches Zombie-Feeling
+function hintergrundMusikAktualisieren() {
+  if (!audioKontext || !musikGainNode) return;
+
+  if (benutzerEinstellungen.musik) {
+    if (!musikQuelleNode) {
+      try {
+        const osc1 = audioKontext.createOscillator();
+        const osc2 = audioKontext.createOscillator();
+        const filter = audioKontext.createBiquadFilter();
+
+        osc1.type = "sawtooth";
+        osc1.frequency.setValueAtTime(55, audioKontext.currentTime); // Sub-Bass
+
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(55.8, audioKontext.currentTime); // Unheimliche Schwebung
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(170, audioKontext.currentTime);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(musikGainNode);
+
+        osc1.start();
+        osc2.start();
+        musikQuelleNode = { osc1, osc2, filter };
+      } catch (e) {
+        console.warn("[Audio] Hintergrundmusik Synthese fehlgeschlagen:", e);
+      }
+    }
+  }
+  lautstaerkeAktualisieren();
 }
 
 function soundEffektSchuss() {
-  if (!audioKontext) return;
+  if (!audioKontext || !benutzerEinstellungen.sound) return;
   try {
+    audioSystemEinrichten();
     const jetzt = audioKontext.currentTime;
     const bufferGroesse = audioKontext.sampleRate * 0.06;
     const buffer = audioKontext.createBuffer(1, bufferGroesse, audioKontext.sampleRate);
@@ -714,14 +872,15 @@ function soundEffektSchuss() {
 
     rauschQuelle.connect(filter);
     filter.connect(gainNode);
-    gainNode.connect(audioKontext.destination);
+    gainNode.connect(sfxGainNode || audioKontext.destination);
     rauschQuelle.start(jetzt);
   } catch (e) {}
 }
 
 function soundEffektTreffer() {
-  if (!audioKontext) return;
+  if (!audioKontext || !benutzerEinstellungen.sound) return;
   try {
+    audioSystemEinrichten();
     const jetzt = audioKontext.currentTime;
     const osc = audioKontext.createOscillator();
     const gain = audioKontext.createGain();
@@ -733,7 +892,7 @@ function soundEffektTreffer() {
     gain.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.1);
 
     osc.connect(gain);
-    gain.connect(audioKontext.destination);
+    gain.connect(sfxGainNode || audioKontext.destination);
     osc.start(jetzt);
     osc.stop(jetzt + 0.1);
   } catch (e) {}
@@ -741,8 +900,9 @@ function soundEffektTreffer() {
 
 // Sieges-Melodie bei gemeistertem Level
 function soundEffektLevelGeschafft() {
-  if (!audioKontext) return;
+  if (!audioKontext || !benutzerEinstellungen.sound) return;
   try {
+    audioSystemEinrichten();
     const jetzt = audioKontext.currentTime;
     const toene = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (Sieg-Fanfare)
     toene.forEach((f, idx) => {
@@ -753,7 +913,7 @@ function soundEffektLevelGeschafft() {
       gain.gain.setValueAtTime(0.2, jetzt + idx * 0.12);
       gain.gain.exponentialRampToValueAtTime(0.01, jetzt + idx * 0.12 + 0.35);
       osc.connect(gain);
-      gain.connect(audioKontext.destination);
+      gain.connect(sfxGainNode || audioKontext.destination);
       osc.start(jetzt + idx * 0.12);
       osc.stop(jetzt + idx * 0.12 + 0.35);
     });
@@ -762,8 +922,9 @@ function soundEffektLevelGeschafft() {
 
 // Bedrohliches Signalhorn beim Start einer neuen Welle
 function soundEffektWelleStart() {
-  if (!audioKontext) return;
+  if (!audioKontext || !benutzerEinstellungen.sound) return;
   try {
+    audioSystemEinrichten();
     const jetzt = audioKontext.currentTime;
     const osc = audioKontext.createOscillator();
     const gain = audioKontext.createGain();
@@ -773,10 +934,263 @@ function soundEffektWelleStart() {
     gain.gain.setValueAtTime(0.22, jetzt);
     gain.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.45);
     osc.connect(gain);
-    gain.connect(audioKontext.destination);
+    gain.connect(sfxGainNode || audioKontext.destination);
     osc.start(jetzt);
     osc.stop(jetzt + 0.45);
   } catch (e) {}
+}
+
+// ========================================================
+// Einstellungsmenü: Steuerung, UI & Speicherung
+// ========================================================
+function einstellungenLaden() {
+  try {
+    const gespeichert = localStorage.getItem(SPEICHER_SCHLUESSEL_EINSTELLUNGEN);
+    if (gespeichert) {
+      const parsed = JSON.parse(gespeichert);
+      benutzerEinstellungen = { ...standardEinstellungen, ...parsed };
+    }
+  } catch (e) {
+    console.warn("[Einstellungen] Konnte gespeicherte Einstellungen nicht laden:", e);
+  }
+}
+
+function einstellungenSpeichern() {
+  try {
+    localStorage.setItem(SPEICHER_SCHLUESSEL_EINSTELLUNGEN, JSON.stringify(benutzerEinstellungen));
+  } catch (e) {
+    console.warn("[Einstellungen] Konnte Einstellungen nicht speichern:", e);
+  }
+}
+
+function einstellungenAnwenden() {
+  if (einstellungMusik) einstellungMusik.checked = benutzerEinstellungen.musik;
+  if (einstellungSound) einstellungSound.checked = benutzerEinstellungen.sound;
+  if (einstellungLautstaerke) einstellungLautstaerke.value = benutzerEinstellungen.lautstaerke;
+  if (lautstaerkeWert) lautstaerkeWert.textContent = `${benutzerEinstellungen.lautstaerke} %`;
+
+  if (einstellungEmpfindlichkeit) einstellungEmpfindlichkeit.value = benutzerEinstellungen.empfindlichkeit;
+  if (empfindlichkeitWert) empfindlichkeitWert.textContent = `${benutzerEinstellungen.empfindlichkeit} %`;
+  if (einstellungBlut) einstellungBlut.checked = benutzerEinstellungen.blutEffekte;
+  if (einstellungLicht) einstellungLicht.checked = benutzerEinstellungen.taschenlampe;
+
+  lautstaerkeAktualisieren();
+  hintergrundMusikAktualisieren();
+}
+
+function einstellungenOeffnen() {
+  audioInitialisieren();
+  einstellungenGeoeffnet = true;
+
+  // Tastatureingaben und Joysticks sofort neutralisieren (Sichere Pause des lokalen Spielers)
+  for (const k in aktiveTasten) {
+    aktiveTasten[k] = false;
+  }
+  bewegungsJoystick.aktiv = false;
+  bewegungsJoystick.vektorX = 0;
+  bewegungsJoystick.vektorY = 0;
+  zielJoystick.aktiv = false;
+  mausGedrueckt = false;
+
+  // Stillstand im Multiplayer melden
+  if (multiplayerVerbindung) {
+    multiplayerVerbindung.sendeBewegung(Math.round(spieler.x), Math.round(spieler.y), spieler.winkel);
+  }
+
+  // Raumdaten und Spielernamen aktualisieren
+  if (einstellungenRaumcodeWert) {
+    einstellungenRaumcodeWert.textContent = multiplayerVerbindung ? (multiplayerVerbindung.aktuellerRaumCode || "-----") : "Lokal";
+  }
+  if (einstellungSpielerName) {
+    einstellungSpielerName.value = spieler.name;
+  }
+  if (einstellungNameFeedback) {
+    einstellungNameFeedback.classList.add("versteckt");
+  }
+
+  if (einstellungenModal) {
+    einstellungenModal.classList.remove("versteckt");
+  }
+}
+
+function einstellungenSchliessen() {
+  einstellungenGeoeffnet = false;
+  if (einstellungenModal) {
+    einstellungenModal.classList.add("versteckt");
+  }
+  if (raumVerlassenDialog) {
+    raumVerlassenDialog.classList.add("versteckt");
+  }
+}
+
+function spielerNameInEinstellungenAendern() {
+  if (!einstellungSpielerName) return;
+  const neuerName = einstellungSpielerName.value.trim();
+  if (!neuerName) {
+    if (einstellungNameFeedback) {
+      einstellungNameFeedback.textContent = "⚠ Name darf nicht leer sein!";
+      einstellungNameFeedback.style.color = "#f87171";
+      einstellungNameFeedback.classList.remove("versteckt");
+    }
+    return;
+  }
+
+  spieler.name = neuerName;
+  localStorage.setItem("zombie_spieler_name", neuerName);
+
+  if (spielerNameInput) spielerNameInput.value = neuerName;
+  if (erstellenSpielerNameVorschau) erstellenSpielerNameVorschau.textContent = neuerName;
+
+  if (multiplayerVerbindung) {
+    multiplayerVerbindung.sendeNameAenderung(neuerName);
+  }
+
+  if (einstellungNameFeedback) {
+    einstellungNameFeedback.textContent = "✓ Name erfolgreich aktualisiert!";
+    einstellungNameFeedback.style.color = "#4ade80";
+    einstellungNameFeedback.classList.remove("versteckt");
+    setTimeout(() => {
+      if (einstellungNameFeedback) einstellungNameFeedback.classList.add("versteckt");
+    }, 2800);
+  }
+}
+
+function einstellungenInitialisieren() {
+  // Zahnrad-Button zum Öffnen des Menüs
+  if (einstellungenOeffnenBtn) {
+    einstellungenOeffnenBtn.addEventListener("click", () => {
+      einstellungenOeffnen();
+    });
+  }
+
+  // Schließen-Button (X)
+  if (einstellungenSchliessenBtn) {
+    einstellungenSchliessenBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      einstellungenSchliessen();
+    });
+  }
+
+  // Schließen bei Klick auf den Hintergrund
+  if (einstellungenModal) {
+    einstellungenModal.addEventListener("click", (e) => {
+      if (e.target === einstellungenModal) {
+        audioInitialisieren();
+        einstellungenSchliessen();
+      }
+    });
+  }
+
+  // Tab-Navigation
+  einstellungenTabs.forEach(tabBtn => {
+    tabBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      const zielTabId = tabBtn.getAttribute("data-tab");
+      einstellungenTabs.forEach(b => b.classList.toggle("aktiv", b === tabBtn));
+      einstellungenTabInhalte.forEach(inhalt => {
+        const istAktiv = inhalt.id === zielTabId;
+        inhalt.classList.toggle("versteckt", !istAktiv);
+        inhalt.classList.toggle("aktiv", istAktiv);
+      });
+    });
+  });
+
+  // Tab 1: Spielraum verlassen mit Bestätigung
+  if (einstellungenRaumVerlassenBtn && raumVerlassenDialog) {
+    einstellungenRaumVerlassenBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      raumVerlassenDialog.classList.remove("versteckt");
+    });
+  }
+
+  if (dialogAbbrechenBtn && raumVerlassenDialog) {
+    dialogAbbrechenBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      raumVerlassenDialog.classList.add("versteckt");
+    });
+  }
+
+  if (dialogBestaetigenBtn) {
+    dialogBestaetigenBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      einstellungenSchliessen();
+      if (multiplayerVerbindung) {
+        multiplayerVerbindung.raumVerlassen();
+      }
+      ansichtWechseln("hauptmenue");
+    });
+  }
+
+  // Tab 2: Audio Toggles & Lautstärkeregler
+  if (einstellungMusik) {
+    einstellungMusik.addEventListener("change", () => {
+      audioInitialisieren();
+      benutzerEinstellungen.musik = einstellungMusik.checked;
+      einstellungenSpeichern();
+      hintergrundMusikAktualisieren();
+    });
+  }
+
+  if (einstellungSound) {
+    einstellungSound.addEventListener("change", () => {
+      audioInitialisieren();
+      benutzerEinstellungen.sound = einstellungSound.checked;
+      einstellungenSpeichern();
+      lautstaerkeAktualisieren();
+    });
+  }
+
+  if (einstellungLautstaerke) {
+    einstellungLautstaerke.addEventListener("input", () => {
+      const wert = parseInt(einstellungLautstaerke.value, 10);
+      benutzerEinstellungen.lautstaerke = wert;
+      if (lautstaerkeWert) lautstaerkeWert.textContent = `${wert} %`;
+      einstellungenSpeichern();
+      lautstaerkeAktualisieren();
+    });
+  }
+
+  // Tab 3: Spielername ändern
+  if (einstellungNameSpeichernBtn) {
+    einstellungNameSpeichernBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      spielerNameInEinstellungenAendern();
+    });
+  }
+  if (einstellungSpielerName) {
+    einstellungSpielerName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        audioInitialisieren();
+        spielerNameInEinstellungenAendern();
+      }
+    });
+  }
+
+  // Tab 5: Steuerungs- und Grafikoptionen
+  if (einstellungEmpfindlichkeit) {
+    einstellungEmpfindlichkeit.addEventListener("input", () => {
+      const wert = parseInt(einstellungEmpfindlichkeit.value, 10);
+      benutzerEinstellungen.empfindlichkeit = wert;
+      if (empfindlichkeitWert) empfindlichkeitWert.textContent = `${wert} %`;
+      einstellungenSpeichern();
+    });
+  }
+
+  if (einstellungBlut) {
+    einstellungBlut.addEventListener("change", () => {
+      audioInitialisieren();
+      benutzerEinstellungen.blutEffekte = einstellungBlut.checked;
+      einstellungenSpeichern();
+    });
+  }
+
+  if (einstellungLicht) {
+    einstellungLicht.addEventListener("change", () => {
+      audioInitialisieren();
+      benutzerEinstellungen.taschenlampe = einstellungLicht.checked;
+      einstellungenSpeichern();
+    });
+  }
 }
 
 // Zeigt das große Level-Banner auf dem Bildschirm
@@ -898,7 +1312,16 @@ function eingabeRegistrieren() {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
       return;
     }
-    if (aktuellerZustand !== "spiel") {
+    // Escape-Taste: Einstellungsmenü umschalten
+    if (e.key === "Escape" && aktuellerZustand === "spiel") {
+      if (einstellungenGeoeffnet) {
+        einstellungenSchliessen();
+      } else {
+        einstellungenOeffnen();
+      }
+      return;
+    }
+    if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) {
       return;
     }
     aktiveTasten[e.key.toLowerCase()] = true;
@@ -912,13 +1335,14 @@ function eingabeRegistrieren() {
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")) {
       return;
     }
+    if (einstellungenGeoeffnet) return;
     aktiveTasten[e.key.toLowerCase()] = false;
     aktiveTasten[e.code] = false;
   });
 
   // B. PC: Maus (Zielen & Schießen)
   window.addEventListener("mousemove", (e) => {
-    if (aktuellerZustand !== "spiel") return;
+    if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) return;
     mausX = e.clientX;
     mausY = e.clientY;
     if (!zielJoystick.aktiv) {
@@ -928,7 +1352,7 @@ function eingabeRegistrieren() {
 
   window.addEventListener("mousedown", (e) => {
     audioInitialisieren();
-    if (aktuellerZustand !== "spiel") return;
+    if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) return;
     if (e.button === 0) {
       mausGedrueckt = true;
       versucheSchussAbzugeben();
@@ -949,7 +1373,7 @@ function eingabeRegistrieren() {
 }
 
 function handleTouchStart(e) {
-  if (aktuellerZustand !== "spiel") return;
+  if (aktuellerZustand !== "spiel" || einstellungenGeoeffnet) return;
   e.preventDefault();
   audioInitialisieren();
   istTouchGeraet = true;
@@ -980,8 +1404,10 @@ function handleTouchStart(e) {
 }
 
 function handleTouchMove(e) {
+  if (einstellungenGeoeffnet) return;
   e.preventDefault();
-  const maxWeg = Spieleinstellungen.touch.maxAuslenkung;
+  const empfindlichkeitsFaktor = (benutzerEinstellungen.empfindlichkeit || 100) / 100;
+  const maxWeg = Math.max(15, Spieleinstellungen.touch.maxAuslenkung / empfindlichkeitsFaktor);
 
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
@@ -1018,6 +1444,7 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
+  if (einstellungenGeoeffnet) return;
   e.preventDefault();
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
@@ -1103,6 +1530,8 @@ function fremdenSchussErzeugen(schuss) {
 
 // 6. Blutspritzer und Treffer-Partikel
 function blutErzeugen(x, y, istTod) {
+  if (!benutzerEinstellungen.blutEffekte) return;
+
   // 1. Kurzlebige Partikel für die Flug-Animation
   const partikelAnzahl = istTod ? 16 : 6;
   for (let i = 0; i < partikelAnzahl; i++) {
@@ -1135,7 +1564,7 @@ function blutErzeugen(x, y, istTod) {
 
 // 7. Spielfigur, Projektile & Partikel aktualisieren
 function spielerAktualisieren() {
-  if (spieler.hp <= 0) return; // Tote Spieler pausieren bis Respawn
+  if (spieler.hp <= 0 || einstellungenGeoeffnet) return; // Tote Spieler oder im Einstellungsmenü pausieren
 
   let moveX = 0;
   let moveY = 0;
@@ -1330,6 +1759,7 @@ function gitterZeichnen() {
 
 // Blutflecken auf dem Boden
 function blutZeichnen() {
+  if (!benutzerEinstellungen.blutEffekte) return;
   ctx.save();
   for (const b of blutFlecken) {
     ctx.fillStyle = `rgba(153, 27, 27, ${b.alpha})`;
@@ -1446,7 +1876,9 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
   ctx.save();
   ctx.translate(x, y);
 
-  taschenlampeZeichnen(winkel);
+  if (benutzerEinstellungen.taschenlampe) {
+    taschenlampeZeichnen(winkel);
+  }
   ctx.rotate(winkel);
 
   // Mündungsfeuer

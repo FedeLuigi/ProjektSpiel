@@ -17,6 +17,7 @@ class MultiplayerVerbindung {
     this.onSpielGestartet = callbacks.onSpielGestartet || null;
     this.onRaumFehler = callbacks.onRaumFehler || null;
     this.onNeuerRaumleiter = callbacks.onNeuerRaumleiter || null;
+    this.onSpielerNameGeaendert = callbacks.onSpielerNameGeaendert || null;
 
     // Callback-Funktionen für das Spielgeschehen
     this.onInitialisiert = callbacks.onInitialisiert || null;
@@ -156,6 +157,19 @@ class MultiplayerVerbindung {
         }
       });
 
+      // Namensänderung eines Spielers synchronisieren
+      this.socket.on("spielerNameGeaendert", (daten) => {
+        if (this.andereSpieler[daten.id]) {
+          this.andereSpieler[daten.id].name = daten.name;
+        }
+        if (this.eigenerSpieler && this.eigenerSpieler.id === daten.id) {
+          this.eigenerSpieler.name = daten.name;
+        }
+        if (typeof this.onSpielerNameGeaendert === "function") {
+          this.onSpielerNameGeaendert(daten);
+        }
+      });
+
       // Schuss eines anderen Spielers empfangen
       this.socket.on("schussAbgefeuert", (schussDaten) => {
         if (typeof this.onSchussEmpfangen === "function") {
@@ -256,6 +270,11 @@ class MultiplayerVerbindung {
     this.aktuellerRaumCode = null;
     this.aktuelleLobby = null;
     this.andereSpieler = {};
+  }
+
+  sendeNameAenderung(neuerName) {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("spielerNameAendern", { neuerName });
   }
 
   sendeBewegung(x, y, winkel, blickrichtung = "rechts") {
