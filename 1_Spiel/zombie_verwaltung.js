@@ -259,6 +259,7 @@ function getZombieAnzahl(raum) {
 
 module.exports = {
   zombieSpawnen,
+  findeSicherenSpawnpunkt,
   zombiesAktualisieren,
   zombieTreffen,
   getZombiesPaket,
