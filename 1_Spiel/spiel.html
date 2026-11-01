@@ -11,7 +11,14 @@
   <meta name="apple-mobile-web-app-title" content="ZombieKoop">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#090d16">
+  <meta name="format-detection" content="telephone=no">
 
+  <!-- PWA Icons und Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/1_Spiel/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/1_Spiel/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="/1_Spiel/apple-touch-icon.png">
+
+  <!-- Web-App-Manifest -->
   <link rel="manifest" href="/manifest.json">
   <title>Zombie Koop 2D</title>
   <link rel="stylesheet" href="design.css">
@@ -45,8 +52,11 @@
       </div>
     </div>
 
-    <!-- Rechts oben: Koordinaten & PC-Steuerungshinweis -->
+    <!-- Rechts oben: Koordinaten, App-Installationsbutton & PC-Steuerungshinweis -->
     <div class="hud-gruppe rechts-oben">
+      <button id="app-install-btn" class="app-install-btn versteckt" title="Als App auf dem Startbildschirm installieren">
+        📱 App installieren
+      </button>
       <div class="position-info" id="spieler-pos">X: 0 | Y: 0</div>
       <div class="pc-steuerung-info">PC: <kbd>WASD</kbd> | <kbd>Maus 🎯</kbd> | <kbd>Klick 💥</kbd></div>
     </div>
@@ -57,6 +67,38 @@
     <div class="banner-inhalt">
       <h2 id="welle-banner-titel">LEVEL 1</h2>
       <p id="welle-banner-untertitel">Überlebe die Zombie-Welle!</p>
+    </div>
+  </div>
+
+  <!-- Installations-Modal für iOS & Android -->
+  <div id="install-modal" class="install-modal versteckt">
+    <div class="install-modal-box">
+      <button id="install-modal-schliessen" class="modal-schliessen-btn" aria-label="Schließen">&times;</button>
+      <div class="install-modal-kopf">
+        <img src="/1_Spiel/apple-touch-icon.png" alt="Zombie Koop Icon" class="install-app-icon">
+        <div>
+          <h3>Zombie Koop als App</h3>
+          <p>Echtes Vollbild ohne Browserleisten</p>
+        </div>
+      </div>
+
+      <!-- Anleitung für iOS (iPhone / iPad) -->
+      <div class="install-anleitung" id="install-anleitung-ios">
+        <p class="anleitung-schritt"><strong>1.</strong> Tippe in Safari unten auf das <strong>Teilen-Symbol</strong> <span class="ios-symbol">📤</span>.</p>
+        <p class="anleitung-schritt"><strong>2.</strong> Scrolle nach unten und wähle <strong>„Zum Home-Bildschirm“</strong> <span class="ios-symbol">➕</span>.</p>
+        <p class="anleitung-schritt"><strong>3.</strong> Bestätige oben rechts mit <strong>„Hinzufügen“</strong>.</p>
+        <div class="anleitung-tipp">
+          💡 Starte das Spiel danach direkt über das Zombie-Symbol auf deinem Startbildschirm – ganz ohne Safari-Adressleiste!
+        </div>
+      </div>
+
+      <!-- Anleitung für Android / Chrome -->
+      <div class="install-anleitung versteckt" id="install-anleitung-android">
+        <p class="anleitung-schritt">Installiere das Spiel direkt auf deinem Startbildschirm für flüssiges Vollbild-Gaming:</p>
+        <button id="android-install-trigger-btn" class="installieren-haupt-btn">
+          ✨ Jetzt auf Startbildschirm installieren
+        </button>
+      </div>
     </div>
   </div>
 

@@ -110,6 +110,9 @@ function spielStarten() {
   // Eingabesteuerung aktivieren
   eingabeRegistrieren();
 
+  // PWA & Smartphone App-Unterstützung aktivieren
+  pwaInitialisieren();
+
   // Socket.IO Multiplayer starten inklusive Zombie-Events
   multiplayerVerbindung = new MultiplayerVerbindung({
     onInitialisiert: (serverSpieler) => {
@@ -333,6 +336,104 @@ function bannerZeigen(titel, untertitel, dauerMs = 3500) {
   bannerTimeout = setTimeout(() => {
     welleBanner.classList.add("versteckt");
   }, dauerMs);
+}
+
+// ========================================================
+// PWA & Smartphone App-Unterstützung (Service Worker & Install-Prompt)
+// ========================================================
+let deferredPrompt = null;
+
+function pwaInitialisieren() {
+  const installBtn = document.getElementById("app-install-btn");
+  const installModal = document.getElementById("install-modal");
+  const modalSchliessen = document.getElementById("install-modal-schliessen");
+  const anleitungIos = document.getElementById("install-anleitung-ios");
+  const anleitungAndroid = document.getElementById("install-anleitung-android");
+  const androidInstallTriggerBtn = document.getElementById("android-install-trigger-btn");
+
+  // Prüfen, ob die App bereits als installierte App (Standalone) ausgeführt wird
+  const istStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                        window.navigator.standalone === true;
+
+  // Prüfen, ob es sich um ein iOS-Gerät handelt
+  const istIos = /iphone|ipad|ipod/i.test(window.navigator.userAgent.toLowerCase());
+
+  // 1. Service Worker registrieren (ermöglicht Offline-App-Shell und extrem schnelles Laden)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/1_Spiel/service-worker.js')
+        .then((reg) => {
+          console.log('[PWA] Service Worker erfolgreich registriert:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('[PWA] Service Worker Registrierung fehlgeschlagen:', err);
+        });
+    });
+  }
+
+  // 2. Android / Chrome vorab abgefangenes Installations-Event
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (!istStandalone && installBtn) {
+      installBtn.classList.remove('versteckt');
+    }
+  });
+
+  // 3. Auf iOS im normalen Safari-Browser den Installationshinweis anbieten
+  if (istIos && !istStandalone && installBtn) {
+    installBtn.classList.remove('versteckt');
+  }
+
+  // 4. Klick auf den HUD-Installationsbutton
+  if (installBtn && installModal) {
+    installBtn.addEventListener('click', () => {
+      audioInitialisieren();
+      installModal.classList.remove('versteckt');
+
+      if (deferredPrompt) {
+        // Android / Chrome: Direkter Installationsbutton verfügbar
+        if (anleitungIos) anleitungIos.classList.add('versteckt');
+        if (anleitungAndroid) anleitungAndroid.classList.remove('versteckt');
+      } else {
+        // iOS Safari oder Standard-Anleitung
+        if (anleitungIos) anleitungIos.classList.remove('versteckt');
+        if (anleitungAndroid) anleitungAndroid.classList.add('versteckt');
+      }
+    });
+  }
+
+  // 5. Android-Installationsdialog auslösen
+  if (androidInstallTriggerBtn) {
+    androidInstallTriggerBtn.addEventListener('click', async () => {
+      audioInitialisieren();
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        console.log(`[PWA] Installationsentscheidung: ${choice.outcome}`);
+        deferredPrompt = null;
+        if (installModal) installModal.classList.add('versteckt');
+        if (choice.outcome === 'accepted' && installBtn) {
+          installBtn.classList.add('versteckt');
+        }
+      }
+    });
+  }
+
+  // 6. Modal schließen (per X-Button oder Klick auf den Hintergrund)
+  if (modalSchliessen && installModal) {
+    modalSchliessen.addEventListener('click', () => {
+      installModal.classList.add('versteckt');
+    });
+  }
+
+  if (installModal) {
+    installModal.addEventListener('click', (e) => {
+      if (e.target === installModal) {
+        installModal.classList.add('versteckt');
+      }
+    });
+  }
 }
 
 // 4. Eingabe-Registrierung
