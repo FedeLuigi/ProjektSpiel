@@ -2,46 +2,54 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProjektSpiel - Öffentliche 2D-Multiplayer Welt</title>
+  <!-- Vollbild & iPhone/Safari Optimierung (verhindert Zoom und nutzt den gesamten Bildschirm inkl. Notch) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- Apple iOS Web-App (PWA) Einstellungen für Vollbild ohne Safari-Leisten -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ZombieKoop">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#090d16">
+
+  <link rel="manifest" href="/manifest.json">
+  <title>Zombie Koop 2D</title>
   <link rel="stylesheet" href="design.css">
 </head>
 <body>
 
-  <div class="spiel-container">
-    <!-- Kopfbereich mit Server- und Spieler-Status -->
-    <header class="spiel-header">
-      <div class="titel-bereich">
-        <h1>🎮 ProjektSpiel</h1>
-        <p class="untertitel">Gemeinsame 2D-Welt (Öffentlich & ohne Anmeldung)</p>
-      </div>
-      <div class="header-status-gruppe">
-        <span class="spieler-badge" id="spieler-anzahl">1 Spieler online</span>
-        <div class="status-bereich" id="multiplayer-status">
-          <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
-          <span class="status-text" id="multiplayer-status-text">Verbinde...</span>
-        </div>
-      </div>
-    </header>
+  <!-- 100% Vollbild-Spielfeld -->
+  <canvas id="spielFeld"></canvas>
 
-    <!-- Das 2D Spielfeld (Canvas) -->
-    <main class="spielfeld-bereich">
-      <canvas id="spielFeld"></canvas>
-    </main>
+  <!-- Dezentes HUD (Head-Up-Display) über dem Spielfeld -->
+  <div class="hud-oberflaeche">
+    <!-- Links oben: Titel, Spieler-Zähler & Serverstatus -->
+    <div class="hud-gruppe links-oben">
+      <span class="spiel-titel">🧟 Zombie Koop</span>
+      <span class="spieler-badge" id="spieler-anzahl">1 Spieler online</span>
+      <div class="status-bereich" id="multiplayer-status">
+        <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
+        <span class="status-text" id="multiplayer-status-text">Verbinde...</span>
+      </div>
+    </div>
 
-    <!-- Fußbereich mit Steuerung und Positionsanzeige -->
-    <footer class="spiel-footer">
-      <div class="tasten-info">
-        <span class="tasten-label">Steuerung:</span>
-        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> oder <kbd>▲</kbd><kbd>◄</kbd><kbd>▼</kbd><kbd>►</kbd>
-      </div>
-      <div class="position-info">
-        Position: <span id="spieler-pos">X: 0 | Y: 0</span>
-      </div>
-    </footer>
+    <!-- Rechts oben: Koordinaten & PC-Steuerungshinweis -->
+    <div class="hud-gruppe rechts-oben">
+      <div class="position-info" id="spieler-pos">X: 0 | Y: 0</div>
+      <div class="pc-steuerung-info">PC: <kbd>WASD</kbd> / <kbd>▲▼◄►</kbd></div>
+    </div>
   </div>
 
-  <!-- Socket.IO Client vom Server bereitgestellt -->
+  <!-- Hinweis bei Hochformat auf Smartphones -->
+  <div id="querformat-hinweis">
+    <div class="hinweis-box">
+      <div class="dreh-symbol">🔄 📱</div>
+      <h2>Bitte ins Querformat drehen</h2>
+      <p>Zombie Koop ist für das Querformat (Landscape) optimiert.</p>
+    </div>
+  </div>
+
+  <!-- Socket.IO Client vom Server -->
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Module des Spiels -->
