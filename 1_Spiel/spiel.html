@@ -25,113 +25,214 @@
 </head>
 <body>
 
+  <!-- ========================================================
+       1. HAUPTMENÜ (Vollständige Startseite - 100% Bildschirm)
+       ======================================================== -->
+  <main id="ansicht-hauptmenue" class="vollbild-seite">
+    <header class="seite-kopfzeile">
+      <div class="logo-kompakt">
+        <span class="logo-icon">🧟</span>
+        <div class="logo-texte">
+          <h1 class="logo-titel">ZOMBIE KOOP 2D</h1>
+          <span class="logo-sub">Multiplayer Survival</span>
+        </div>
+      </div>
+      <div class="kopf-aktionen">
+        <button id="app-install-btn" class="app-install-btn versteckt" title="Als App auf dem Startbildschirm installieren">
+          📱 App installieren
+        </button>
+      </div>
+    </header>
+
+    <div class="hauptmenue-koerper">
+      <!-- Linke Spalte: Überlebenden-Profil & Einstellungen -->
+      <section class="menue-spalte links">
+        <div class="profil-bereich">
+          <h2 class="abschnitt-titel">👤 Dein Überlebender</h2>
+          <label for="spieler-name-input" class="feld-label">Wähle deinen Funk-Rufnamen:</label>
+          <div class="eingabe-zeile">
+            <input type="text" id="spieler-name-input" class="vollbild-input" placeholder="Spielername..." maxlength="16" autocomplete="off">
+            <button id="zufalls-name-btn" class="icon-quadrat-btn" title="Zufälliger Name" aria-label="Zufallsname">🎲</button>
+          </div>
+          <p class="profil-hinweis">Dein Name wird automatisch für deine nächsten Runden gespeichert.</p>
+        </div>
+
+        <div class="steuerung-vorschau">
+          <span class="vorschau-titel">🎮 Steuerung</span>
+          <p><strong>PC:</strong> <kbd>WASD</kbd> Bewegen • <kbd>Maus</kbd> Zielen • <kbd>Klick</kbd> Schießen</p>
+          <p><strong>Smartphone:</strong> Links Laufen • Rechts Zielen & Feuern</p>
+        </div>
+      </section>
+
+      <!-- Rechte Spalte: Spielmodi (Große Vollbild-Buttons) -->
+      <section class="menue-spalte rechts">
+        <button id="nav-raum-erstellen-btn" class="auswahl-kachel gruen">
+          <div class="kachel-icon">➕</div>
+          <div class="kachel-info">
+            <span class="kachel-ueberschrift">Spielraum erstellen</span>
+            <span class="kachel-beschreibung">Eröffne eine neue Lobby als Raumleiter und lade Freunde per Code oder Link ein.</span>
+          </div>
+          <div class="kachel-pfeil">➔</div>
+        </button>
+
+        <button id="nav-raum-beitreten-btn" class="auswahl-kachel blau">
+          <div class="kachel-icon">🚪</div>
+          <div class="kachel-info">
+            <span class="kachel-ueberschrift">Spielraum beitreten</span>
+            <span class="kachel-beschreibung">Tritt einer bestehenden Gruppe mit einem 5-stelligen Einladungscode bei.</span>
+          </div>
+          <div class="kachel-pfeil">➔</div>
+        </button>
+      </section>
+    </div>
+  </main>
+
+  <!-- ========================================================
+       2. SEITENANSICHT: SPIELRAUM ERSTELLEN (100% Bildschirm)
+       ======================================================== -->
+  <main id="ansicht-raum-erstellen" class="vollbild-seite versteckt">
+    <header class="seite-kopfzeile">
+      <button id="erstellen-zurueck-btn" class="zurueck-nav-btn">
+        <span class="nav-pfeil">⬅</span>
+        <span>Hauptmenü</span>
+      </button>
+      <h1 class="seite-zentral-titel">Neuen Spielraum eröffnen</h1>
+      <div class="kopf-platzhalter"></div>
+    </header>
+
+    <div class="zentrierter-seiten-inhalt">
+      <div class="briefing-karte">
+        <div class="briefing-symbol">👑</div>
+        <h2>Du startest als Raumleiter</h2>
+        <p class="briefing-text">
+          Nach dem Erstellen erhältst du einen eindeutigen <strong>5-stelligen Einladungscode</strong> sowie einen 
+          <strong>Einladungslink</strong>, den du direkt an deine Mitspieler weitergeben kannst.
+        </p>
+
+        <div class="briefing-status-feld">
+          <span class="status-bezeichnung">Dein Name im Raum:</span>
+          <span class="status-wert" id="erstellen-spieler-name-vorschau">Überlebender</span>
+        </div>
+
+        <div class="seiten-aktions-leiste">
+          <button id="raum-erstellen-ausfuehren-btn" class="haupt-aktions-btn gruen">
+            🚀 Spielraum jetzt erstellen
+          </button>
+          <button id="erstellen-abbrechen-btn" class="sekundaer-text-btn">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================
+       3. SEITENANSICHT: SPIELRAUM BEITRETEN (100% Bildschirm)
+       ======================================================== -->
+  <main id="ansicht-raum-beitreten" class="vollbild-seite versteckt">
+    <header class="seite-kopfzeile">
+      <button id="beitreten-zurueck-btn" class="zurueck-nav-btn">
+        <span class="nav-pfeil">⬅</span>
+        <span>Hauptmenü</span>
+      </button>
+      <h1 class="seite-zentral-titel">Spielraum beitreten</h1>
+      <div class="kopf-platzhalter"></div>
+    </header>
+
+    <div class="zentrierter-seiten-inhalt">
+      <div class="briefing-karte">
+        <div class="briefing-symbol">🔑</div>
+        <h2>Einladungscode eingeben</h2>
+        <p class="briefing-text">
+          Gib den 5-stelligen Raumcode ein, den du vom Raumleiter erhalten hast:
+        </p>
+
+        <!-- Fehlermeldung bei falschem Code -->
+        <div id="beitreten-fehler-box" class="menue-fehler-box versteckt"></div>
+
+        <div class="code-eingabe-container">
+          <input type="text" id="beitreten-code-input" class="vollbild-code-input" placeholder="Z.B. K7X9Q" maxlength="5" autocomplete="off" autocapitalize="characters">
+        </div>
+
+        <div class="seiten-aktions-leiste">
+          <button id="raum-beitreten-ausfuehren-btn" class="haupt-aktions-btn blau">
+            🚪 Dem Raum beitreten
+          </button>
+          <button id="beitreten-abbrechen-btn" class="sekundaer-text-btn">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================================================
+       4. SEITENANSICHT: LOBBY (100% Bildschirm)
+       ======================================================== -->
+  <main id="ansicht-lobby" class="vollbild-seite versteckt">
+    <header class="seite-kopfzeile lobby-kopfzeile">
+      <button id="lobby-verlassen-btn" class="zurueck-nav-btn rot">
+        <span class="nav-pfeil">🚪</span>
+        <span>Raum verlassen</span>
+      </button>
+
+      <div class="lobby-code-badge-gruppe">
+        <span class="lobby-code-label">RAUMCODE:</span>
+        <span class="lobby-code-wert" id="lobby-raum-code">-----</span>
+        <button id="lobby-code-kopieren-btn" class="lobby-mini-btn" title="Code in Zwischenablage kopieren">
+          📋 Code
+        </button>
+        <button id="lobby-link-kopieren-btn" class="lobby-mini-btn highlight" title="Einladungslink teilen">
+          🔗 Link teilen
+        </button>
+      </div>
+
+      <div class="lobby-spieler-zaehler-badge" id="lobby-spieler-zaehler">
+        👥 1 / 6 Überlebende
+      </div>
+    </header>
+
+    <!-- Toast Nachricht bei Link/Code-Kopie -->
+    <div id="lobby-toast" class="lobby-toast versteckt"></div>
+
+    <div class="lobby-hauptbereich">
+      <div class="lobby-liste-kopf">
+        <h2 class="lobby-liste-ueberschrift">Überlebende in der Lobby:</h2>
+        <span class="lobby-hinweis-text">Gemeinsam seid ihr stärker gegen die Zombie-Horden.</span>
+      </div>
+
+      <!-- Dynamisch generierte Spieler-Karten -->
+      <div class="lobby-spieler-raster" id="lobby-spieler-liste">
+        <!-- Rendered by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Feste Footer-Aktionsleiste am unteren Bildschirmrand -->
+    <footer class="lobby-fusszeile">
+      <div class="lobby-fusszeile-links">
+        <button id="lobby-bereit-btn" class="lobby-status-umschalt-btn">
+          ✅ Ich bin bereit
+        </button>
+      </div>
+
+      <div class="lobby-fusszeile-rechts">
+        <div id="lobby-leiter-status-text" class="lobby-leiter-hinweis">
+          Warte auf Bereitschaft aller Spieler...
+        </div>
+        <button id="lobby-starten-btn" class="lobby-start-haupt-btn" disabled>
+          🔥 Runde starten
+        </button>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ========================================================
+       5. SPIELWELT (Canvas & In-Game HUD)
+       ======================================================== -->
   <!-- 100% Vollbild-Spielfeld -->
   <canvas id="spielFeld"></canvas>
 
-  <!-- 1. HAUPTMENÜ-ANSICHT -->
-  <div id="hauptmenue-ansicht" class="menue-overlay">
-    <div class="menue-karte">
-      <div class="menue-logo-bereich">
-        <div class="menue-zombie-icon">🧟</div>
-        <h1 class="menue-titel">ZOMBIE KOOP</h1>
-        <p class="menue-untertitel">Online Multiplayer Survival</p>
-      </div>
-
-      <!-- Fehlermeldung bei falschem Code etc. -->
-      <div id="menue-fehler-box" class="menue-fehler-box versteckt"></div>
-
-      <!-- Eingabe des Spielernamens -->
-      <div class="menue-eingabe-gruppe">
-        <label for="spieler-name-input" class="menue-label">Dein Überlebender:</label>
-        <div class="eingabe-mit-button">
-          <input type="text" id="spieler-name-input" class="menue-input" placeholder="Name eingeben..." maxlength="16" autocomplete="off">
-          <button id="zufalls-name-btn" class="menue-icon-btn" title="Zufälliger Name" aria-label="Zufallsname">🎲</button>
-        </div>
-      </div>
-
-      <!-- Aktionen: Raum erstellen oder beitreten -->
-      <div class="menue-aktionen">
-        <button id="menue-raum-erstellen-btn" class="menue-haupt-btn gruen">
-          <span class="btn-icon">➕</span>
-          <span class="btn-text">Spielraum erstellen</span>
-        </button>
-
-        <div class="menue-trenner">
-          <span>ODER EINEM RAUM BEITRETEN</span>
-        </div>
-
-        <div class="raum-beitreten-bereich">
-          <div class="eingabe-mit-button">
-            <input type="text" id="menue-raum-code-input" class="menue-input code-input" placeholder="RAUMCODE (Z.B. K7X9)" maxlength="5" autocomplete="off" autocapitalize="characters">
-            <button id="menue-raum-beitreten-btn" class="menue-haupt-btn blau">
-              <span class="btn-icon">🚪</span>
-              <span class="btn-text">Beitreten</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Steuerungshinweis -->
-      <div class="menue-fussnote">
-        <span>🎮 PC: <kbd>WASD</kbd> + <kbd>Maus</kbd> | 📱 Smartphone: Doppel-Touch-Joysticks</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. LOBBY-ANSICHT -->
-  <div id="lobby-ansicht" class="menue-overlay versteckt">
-    <div class="lobby-karte">
-      <!-- Lobby Header -->
-      <div class="lobby-kopf">
-        <div class="lobby-kopf-links">
-          <span class="lobby-abzeichen">RAUM</span>
-          <span class="lobby-raum-code-text" id="lobby-raum-code">-----</span>
-        </div>
-        <div class="lobby-kopf-mitte">
-          <button id="lobby-code-kopieren-btn" class="lobby-mini-btn" title="Raumcode kopieren">
-            📋 Code kopieren
-          </button>
-          <button id="lobby-link-kopieren-btn" class="lobby-mini-btn highlight" title="Einladungslink teilen">
-            🔗 Link teilen
-          </button>
-        </div>
-        <div class="lobby-kopf-rechts">
-          <span class="lobby-spieler-zaehler" id="lobby-spieler-zaehler">👥 1 / 6 Spieler</span>
-        </div>
-      </div>
-
-      <!-- Toast / Infomeldung (z.B. "Link in Zwischenablage kopiert!") -->
-      <div id="lobby-toast" class="lobby-toast versteckt"></div>
-
-      <!-- Spielerliste -->
-      <div class="lobby-spieler-liste-titel">Überlebende im Raum:</div>
-      <div class="lobby-spieler-liste" id="lobby-spieler-liste">
-        <!-- Spieler-Karten werden per JavaScript dynamisch gerendert -->
-      </div>
-
-      <!-- Lobby Aktions-Leiste -->
-      <div class="lobby-aktions-leiste">
-        <button id="lobby-verlassen-btn" class="lobby-btn sekundaer">
-          🚪 Raum verlassen
-        </button>
-
-        <button id="lobby-bereit-btn" class="lobby-btn bereit-btn">
-          ✅ Ich bin bereit
-        </button>
-
-        <div class="lobby-start-bereich">
-          <button id="lobby-starten-btn" class="lobby-btn start-btn" disabled>
-            🔥 Runde starten
-          </button>
-          <div id="lobby-leiter-status-text" class="lobby-status-text">
-            Warte auf alle Spieler...
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. IN-GAME HUD (Head-Up-Display) über dem Spielfeld -->
+  <!-- In-Game HUD über dem Spielfeld -->
   <div class="hud-oberflaeche versteckt" id="spiel-hud">
     <!-- Links oben: Titel, Level, Lebensbalken, Zombie-Zähler & Spieler -->
     <div class="hud-gruppe links-oben">
@@ -155,13 +256,10 @@
       </div>
     </div>
 
-    <!-- Rechts oben: Koordinaten, App-Installationsbutton, Verlassen-Button & PC-Steuerung -->
+    <!-- Rechts oben: Koordinaten, Verlassen-Button & PC-Steuerung -->
     <div class="hud-gruppe rechts-oben">
       <button id="spiel-verlassen-btn" class="app-install-btn rot" title="Spiel verlassen und zur Lobby zurückkehren">
         🚪 Verlassen
-      </button>
-      <button id="app-install-btn" class="app-install-btn versteckt" title="Als App auf dem Startbildschirm installieren">
-        📱 App installieren
       </button>
       <div class="position-info" id="spieler-pos">X: 0 | Y: 0</div>
       <div class="pc-steuerung-info">PC: <kbd>WASD</kbd> | <kbd>Maus 🎯</kbd> | <kbd>Klick 💥</kbd></div>
@@ -205,15 +303,6 @@
           ✨ Jetzt auf Startbildschirm installieren
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- Hinweis bei Hochformat auf Smartphones -->
-  <div id="querformat-hinweis">
-    <div class="hinweis-box">
-      <div class="dreh-symbol">🔄 📱</div>
-      <h2>Bitte ins Querformat drehen</h2>
-      <p>Zombie Koop ist für das Querformat (Landscape) optimiert.</p>
     </div>
   </div>
 

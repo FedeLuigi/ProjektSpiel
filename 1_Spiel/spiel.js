@@ -77,16 +77,28 @@ const zielJoystick = {
   aktuellY: 0
 };
 
-// Menü- und Lobby-Elemente
-let hauptmenueAnsicht = null;
-let lobbyAnsicht = null;
+// Vollbild-Seitenansichten & Navigation
+let ansichtHauptmenue = null;
+let ansichtRaumErstellen = null;
+let ansichtRaumBeitreten = null;
+let ansichtLobby = null;
 let spielHud = null;
+
 let spielerNameInput = null;
 let zufallsNameBtn = null;
-let menueRaumErstellenBtn = null;
-let menueRaumCodeInput = null;
-let menueRaumBeitretenBtn = null;
-let menueFehlerBox = null;
+let navRaumErstellenBtn = null;
+let navRaumBeitretenBtn = null;
+
+let erstellenZurueckBtn = null;
+let erstellenAbbrechenBtn = null;
+let erstellenSpielerNameVorschau = null;
+let raumErstellenAusfuehrenBtn = null;
+
+let beitretenZurueckBtn = null;
+let beitretenAbbrechenBtn = null;
+let beitretenCodeInput = null;
+let beitretenFehlerBox = null;
+let raumBeitretenAusfuehrenBtn = null;
 
 let lobbyRaumCode = null;
 let lobbyCodeKopierenBtn = null;
@@ -100,7 +112,7 @@ let lobbyStartenBtn = null;
 let lobbyLeiterStatusText = null;
 let spielVerlassenBtn = null;
 
-let aktuellerZustand = "menue"; // "menue" | "lobby" | "spiel"
+let aktuellerZustand = "hauptmenue"; // "hauptmenue" | "raum-erstellen" | "raum-beitreten" | "lobby" | "spiel"
 let toastTimer = null;
 
 const ZOMBIE_NAMEN = [
@@ -115,6 +127,15 @@ function zufallsNameGenerieren() {
   return `${name}_${nr}`;
 }
 
+// Automatische Querformat-Aktivierung (Landscape) ohne störende Drehhinweise
+function querformatAktivieren() {
+  try {
+    if (screen.orientation && typeof screen.orientation.lock === "function") {
+      screen.orientation.lock("landscape").catch(() => {});
+    }
+  } catch (e) {}
+}
+
 function toastZeigen(text, dauerMs = 2600) {
   if (!lobbyToast) return;
   lobbyToast.textContent = text;
@@ -125,21 +146,37 @@ function toastZeigen(text, dauerMs = 2600) {
   }, dauerMs);
 }
 
-function menueFehlerZeigen(text) {
-  if (!menueFehlerBox) return;
-  menueFehlerBox.textContent = text;
-  menueFehlerBox.classList.remove("versteckt");
+function beitretenFehlerZeigen(text) {
+  if (!beitretenFehlerBox) return;
+  beitretenFehlerBox.textContent = text;
+  beitretenFehlerBox.classList.remove("versteckt");
 }
 
-function menueFehlerVerstecken() {
-  if (menueFehlerBox) menueFehlerBox.classList.add("versteckt");
+function beitretenFehlerVerstecken() {
+  if (beitretenFehlerBox) beitretenFehlerBox.classList.add("versteckt");
 }
 
+// Zentrale Seitenansichten-Umschaltung: Ersetzt die vorherige Ansicht vollständig
 function ansichtWechseln(zustand) {
   aktuellerZustand = zustand;
-  if (hauptmenueAnsicht) hauptmenueAnsicht.classList.toggle("versteckt", zustand !== "menue");
-  if (lobbyAnsicht) lobbyAnsicht.classList.toggle("versteckt", zustand !== "lobby");
+
+  if (ansichtHauptmenue) ansichtHauptmenue.classList.toggle("versteckt", zustand !== "hauptmenue");
+  if (ansichtRaumErstellen) ansichtRaumErstellen.classList.toggle("versteckt", zustand !== "raum-erstellen");
+  if (ansichtRaumBeitreten) ansichtRaumBeitreten.classList.toggle("versteckt", zustand !== "raum-beitreten");
+  if (ansichtLobby) ansichtLobby.classList.toggle("versteckt", zustand !== "lobby");
   if (spielHud) spielHud.classList.toggle("versteckt", zustand !== "spiel");
+  if (canvas) canvas.classList.toggle("versteckt", zustand !== "spiel");
+
+  if (zustand === "raum-erstellen" && erstellenSpielerNameVorschau) {
+    erstellenSpielerNameVorschau.textContent = spieler.name;
+  }
+
+  if (zustand === "raum-beitreten") {
+    beitretenFehlerVerstecken();
+    if (beitretenCodeInput) {
+      setTimeout(() => beitretenCodeInput.focus(), 150);
+    }
+  }
 
   if (zustand === "spiel") {
     bildschirmGroesseAnpassen();
@@ -152,7 +189,7 @@ function lobbyRendern(lobbyDaten) {
   if (!lobbyDaten) return;
 
   if (lobbyRaumCode) lobbyRaumCode.textContent = lobbyDaten.raumCode;
-  if (lobbySpielerZaehler) lobbySpielerZaehler.textContent = `👥 ${lobbyDaten.spielerAnzahl} / 6 Spieler`;
+  if (lobbySpielerZaehler) lobbySpielerZaehler.textContent = `👥 ${lobbyDaten.spielerAnzahl} / 6 Überlebende`;
 
   if (lobbySpielerListe) {
     lobbySpielerListe.innerHTML = "";
@@ -265,17 +302,33 @@ function spielStarten() {
   welleBannerTitel = document.getElementById("welle-banner-titel");
   welleBannerUntertitel = document.getElementById("welle-banner-untertitel");
 
-  // Menü & Lobby DOM-Elemente
-  hauptmenueAnsicht = document.getElementById("hauptmenue-ansicht");
-  lobbyAnsicht = document.getElementById("lobby-ansicht");
+  // Vollbild-Seitenansichten
+  ansichtHauptmenue = document.getElementById("ansicht-hauptmenue");
+  ansichtRaumErstellen = document.getElementById("ansicht-raum-erstellen");
+  ansichtRaumBeitreten = document.getElementById("ansicht-raum-beitreten");
+  ansichtLobby = document.getElementById("ansicht-lobby");
   spielHud = document.getElementById("spiel-hud");
+
+  // Hauptmenü Elemente
   spielerNameInput = document.getElementById("spieler-name-input");
   zufallsNameBtn = document.getElementById("zufalls-name-btn");
-  menueRaumErstellenBtn = document.getElementById("menue-raum-erstellen-btn");
-  menueRaumCodeInput = document.getElementById("menue-raum-code-input");
-  menueRaumBeitretenBtn = document.getElementById("menue-raum-beitreten-btn");
-  menueFehlerBox = document.getElementById("menue-fehler-box");
+  navRaumErstellenBtn = document.getElementById("nav-raum-erstellen-btn");
+  navRaumBeitretenBtn = document.getElementById("nav-raum-beitreten-btn");
 
+  // Raum erstellen Ansicht
+  erstellenZurueckBtn = document.getElementById("erstellen-zurueck-btn");
+  erstellenAbbrechenBtn = document.getElementById("erstellen-abbrechen-btn");
+  erstellenSpielerNameVorschau = document.getElementById("erstellen-spieler-name-vorschau");
+  raumErstellenAusfuehrenBtn = document.getElementById("raum-erstellen-ausfuehren-btn");
+
+  // Raum beitreten Ansicht
+  beitretenZurueckBtn = document.getElementById("beitreten-zurueck-btn");
+  beitretenAbbrechenBtn = document.getElementById("beitreten-abbrechen-btn");
+  beitretenCodeInput = document.getElementById("beitreten-code-input");
+  beitretenFehlerBox = document.getElementById("beitreten-fehler-box");
+  raumBeitretenAusfuehrenBtn = document.getElementById("raum-beitreten-ausfuehren-btn");
+
+  // Lobby Ansicht
   lobbyRaumCode = document.getElementById("lobby-raum-code");
   lobbyCodeKopierenBtn = document.getElementById("lobby-code-kopieren-btn");
   lobbyLinkKopierenBtn = document.getElementById("lobby-link-kopieren-btn");
@@ -286,6 +339,8 @@ function spielStarten() {
   lobbyBereitBtn = document.getElementById("lobby-bereit-btn");
   lobbyStartenBtn = document.getElementById("lobby-starten-btn");
   lobbyLeiterStatusText = document.getElementById("lobby-leiter-status-text");
+
+  // In-Game Verlassen-Button
   spielVerlassenBtn = document.getElementById("spiel-verlassen-btn");
 
   // Vollbild initialisieren
@@ -294,6 +349,12 @@ function spielStarten() {
   window.addEventListener("orientationchange", () => {
     setTimeout(bildschirmGroesseAnpassen, 150);
   });
+
+  // Automatisches Querformat aktivieren (Screen Orientation API)
+  querformatAktivieren();
+  window.addEventListener("click", querformatAktivieren);
+  window.addEventListener("touchstart", querformatAktivieren, { passive: true });
+  document.addEventListener("fullscreenchange", querformatAktivieren);
 
   // Spielername initialisieren (aus LocalStorage oder zufällig)
   const gespeicherterName = localStorage.getItem("zombie_spieler_name");
@@ -305,9 +366,11 @@ function spielStarten() {
   if (spielerNameInput) {
     spielerNameInput.value = spieler.name;
     spielerNameInput.addEventListener("input", () => {
-      menueFehlerVerstecken();
       spieler.name = spielerNameInput.value.trim() || "Überlebender";
       localStorage.setItem("zombie_spieler_name", spieler.name);
+      if (erstellenSpielerNameVorschau) {
+        erstellenSpielerNameVorschau.textContent = spieler.name;
+      }
     });
   }
 
@@ -319,51 +382,71 @@ function spielStarten() {
       spielerNameInput.value = neuerName;
       spieler.name = neuerName;
       localStorage.setItem("zombie_spieler_name", neuerName);
-    });
-  }
-
-  // Einladungscode aus URL-Parameter übernehmen (?raum=CODE)
-  const urlParameter = new URLSearchParams(window.location.search);
-  const raumUrlCode = urlParameter.get("raum");
-  if (raumUrlCode && menueRaumCodeInput) {
-    menueRaumCodeInput.value = raumUrlCode.trim().toUpperCase();
-  }
-
-  // Raumcode-Eingabefeld: automatische Großschreibung & Fehler ausblenden
-  if (menueRaumCodeInput) {
-    menueRaumCodeInput.addEventListener("input", () => {
-      menueFehlerVerstecken();
-      menueRaumCodeInput.value = menueRaumCodeInput.value.toUpperCase();
-    });
-    menueRaumCodeInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        if (menueRaumBeitretenBtn) menueRaumBeitretenBtn.click();
+      if (erstellenSpielerNameVorschau) {
+        erstellenSpielerNameVorschau.textContent = neuerName;
       }
     });
   }
 
-  // Menü-Button: Spielraum erstellen
-  if (menueRaumErstellenBtn) {
-    menueRaumErstellenBtn.addEventListener("click", () => {
+  // Navigation: Hauptmenü -> Raum erstellen
+  if (navRaumErstellenBtn) {
+    navRaumErstellenBtn.addEventListener("click", () => {
       audioInitialisieren();
-      menueFehlerVerstecken();
-      const gewaehlterName = spielerNameInput ? spielerNameInput.value.trim() : spieler.name;
-      multiplayerVerbindung.raumErstellen(gewaehlterName);
+      ansichtWechseln("raum-erstellen");
     });
   }
 
-  // Menü-Button: Spielraum beitreten
-  if (menueRaumBeitretenBtn) {
-    menueRaumBeitretenBtn.addEventListener("click", () => {
+  // Navigation: Hauptmenü -> Raum beitreten
+  if (navRaumBeitretenBtn) {
+    navRaumBeitretenBtn.addEventListener("click", () => {
       audioInitialisieren();
-      menueFehlerVerstecken();
-      const code = menueRaumCodeInput ? menueRaumCodeInput.value.trim() : "";
+      ansichtWechseln("raum-beitreten");
+    });
+  }
+
+  // Navigation: Zurück zum Hauptmenü
+  const zurueckZumHauptmenue = () => {
+    audioInitialisieren();
+    beitretenFehlerVerstecken();
+    ansichtWechseln("hauptmenue");
+  };
+  if (erstellenZurueckBtn) erstellenZurueckBtn.addEventListener("click", zurueckZumHauptmenue);
+  if (erstellenAbbrechenBtn) erstellenAbbrechenBtn.addEventListener("click", zurueckZumHauptmenue);
+  if (beitretenZurueckBtn) beitretenZurueckBtn.addEventListener("click", zurueckZumHauptmenue);
+  if (beitretenAbbrechenBtn) beitretenAbbrechenBtn.addEventListener("click", zurueckZumHauptmenue);
+
+  // Aktion: Raum erstellen ausführen
+  if (raumErstellenAusfuehrenBtn) {
+    raumErstellenAusfuehrenBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      multiplayerVerbindung.raumErstellen(spieler.name);
+    });
+  }
+
+  // Aktion: Raum beitreten ausführen
+  if (raumBeitretenAusfuehrenBtn) {
+    raumBeitretenAusfuehrenBtn.addEventListener("click", () => {
+      audioInitialisieren();
+      beitretenFehlerVerstecken();
+      const code = beitretenCodeInput ? beitretenCodeInput.value.trim() : "";
       if (!code) {
-        menueFehlerZeigen("Bitte gib einen 5-stelligen Raumcode ein!");
+        beitretenFehlerZeigen("Bitte gib einen 5-stelligen Raumcode ein!");
         return;
       }
-      const gewaehlterName = spielerNameInput ? spielerNameInput.value.trim() : spieler.name;
-      multiplayerVerbindung.raumBeitreten(code, gewaehlterName);
+      multiplayerVerbindung.raumBeitreten(code, spieler.name);
+    });
+  }
+
+  // Raumcode-Eingabe: Enter-Taste & automatische Großschreibung
+  if (beitretenCodeInput) {
+    beitretenCodeInput.addEventListener("input", () => {
+      beitretenFehlerVerstecken();
+      beitretenCodeInput.value = beitretenCodeInput.value.toUpperCase();
+    });
+    beitretenCodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && raumBeitretenAusfuehrenBtn) {
+        raumBeitretenAusfuehrenBtn.click();
+      }
     });
   }
 
@@ -425,16 +508,16 @@ function spielStarten() {
     lobbyVerlassenBtn.addEventListener("click", () => {
       audioInitialisieren();
       multiplayerVerbindung.raumVerlassen();
-      ansichtWechseln("menue");
+      ansichtWechseln("hauptmenue");
     });
   }
 
-  // In-Game Button: Spiel verlassen und zurück zum Menü
+  // In-Game Button: Spiel verlassen und zurück zum Hauptmenü
   if (spielVerlassenBtn) {
     spielVerlassenBtn.addEventListener("click", () => {
       audioInitialisieren();
       multiplayerVerbindung.raumVerlassen();
-      ansichtWechseln("menue");
+      ansichtWechseln("hauptmenue");
     });
   }
 
@@ -469,7 +552,7 @@ function spielStarten() {
     },
 
     onRaumFehler: (nachricht) => {
-      menueFehlerZeigen(nachricht);
+      beitretenFehlerZeigen(nachricht);
       toastZeigen(nachricht);
     },
 
@@ -569,8 +652,15 @@ function spielStarten() {
     }
   });
 
-  // Initiale Ansicht: Hauptmenü
-  ansichtWechseln("menue");
+  // Initiale Ansicht: Hauptmenü oder Direktbeitritt bei ?raum=CODE
+  const urlParameter = new URLSearchParams(window.location.search);
+  const raumUrlCode = urlParameter.get("raum");
+  if (raumUrlCode) {
+    if (beitretenCodeInput) beitretenCodeInput.value = raumUrlCode.trim().toUpperCase();
+    ansichtWechseln("raum-beitreten");
+  } else {
+    ansichtWechseln("hauptmenue");
+  }
 
   // Game Loop starten
   requestAnimationFrame(gameLoop);
