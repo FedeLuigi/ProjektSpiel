@@ -14,9 +14,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
-// Statische Dateien ausliefern und Startseite weiterleiten
+// Startseite direkt auf die SPIELBOX leiten und statische Dateien ausliefern
+app.get('/', (req, res) => res.redirect('/0_Spielbox/spielbox.html'));
 app.use(express.static(__dirname));
-app.get('/', (req, res) => res.redirect('/1_Spiel/spiel.html'));
 
 // ==========================================
 // Socket.IO: Netzwerk-Ereignisse (Multiplayer-Lobby & Räume)
@@ -218,8 +218,10 @@ setInterval(() => {
 // Server starten
 server.listen(PORT, '0.0.0.0', () => {
   console.log('=============================================');
-  console.log(`🧟 Zombie Koop - Multiplayer Server gestartet!`);
+  console.log(`🎮 SPIELBOX - Plattform & Multiplayer Server`);
   console.log(`🌐 Server läuft auf Port: ${PORT}`);
+  console.log(`🕹️ SPIELBOX Startseite: http://localhost:${PORT}/`);
+  console.log(`🧟 Zombie Koop 2D: http://localhost:${PORT}/1_Spiel/spiel.html`);
   console.log(`👥 Raum-System & Lobby erfolgreich aktiviert.`);
   console.log('=============================================');
 });

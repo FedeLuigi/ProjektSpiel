@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <!-- Apple iOS Web-App Einstellungen für Vollbild -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SPIELBOX">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#070a12">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Favicons und PWA Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/0_Spielbox/grafiken/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/0_Spielbox/grafiken/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="/0_Spielbox/grafiken/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+
+  <title>SPIELBOX – Deine Multiplayer-Spieleplattform</title>
+  <link rel="stylesheet" href="/0_Spielbox/spielbox.css">
+</head>
+<body>
+
+  <!-- ========================================================
+       PLATTFORM KOPFZEILE (HEADER)
+       ======================================================== -->
+  <header class="plattform-kopf">
+    <div class="kopf-inhalt">
+      <a href="/" class="plattform-brand">
+        <span class="brand-icon">🎮</span>
+        <div class="brand-texte">
+          <span class="brand-titel">SPIELBOX</span>
+          <span class="brand-untertitel">Multiplayer Hub</span>
+        </div>
+      </a>
+
+      <!-- Spieler-Profil Badge & Aktionen -->
+      <div class="kopf-profil-leiste">
+        <div class="profil-pill">
+          <span class="profil-name-label">Profil:</span>
+          <span class="profil-name-wert" id="kopf-spieler-name">Spieler</span>
+          <button id="kopf-zufalls-name-btn" class="mini-icon-btn" title="Neuer Zufallsname" aria-label="Zufallsname">🎲</button>
+        </div>
+
+        <div class="kopf-aktionen">
+          <button id="plattform-install-btn" class="app-install-btn" style="display: none;" title="Als App installieren">
+            📱 App installieren
+          </button>
+          <button id="plattform-einstellungen-btn" class="icon-rund-btn" title="Plattform-Einstellungen" aria-label="Einstellungen">
+            ⚙️
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================
+       PLATTFORM INHALT & HERO
+       ======================================================== -->
+  <main class="plattform-container">
+    <section class="hero-bereich">
+      <div class="hero-text">
+        <h2>Willkommen in der SPIELBOX 🕹️</h2>
+        <p>
+          Wähle dein Spiel, starte eigene Multiplayer-Räume oder tritt deinen Freunden per Einladungscode bei. 
+          Voll optimiert für PC und Smartphones!
+        </p>
+      </div>
+
+      <!-- Schnell-Beitritt Widget -->
+      <div class="schnell-beitritt-kasten">
+        <h3>🔑 Raumcode beitreten</h3>
+        <p class="zeile-sub">Hast du einen 5-stelligen Code für Zombie Koop?</p>
+        <div class="code-eingabe-gruppe">
+          <input type="text" id="schnell-code-input" class="code-input-feld" placeholder="CODE" maxlength="5" autocomplete="off" autocapitalize="characters">
+          <button id="schnell-beitritt-btn" class="code-beitritt-btn">Beitreten</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         SPIELE-KATALOG
+         ======================================================== -->
+    <section class="katalog-bereich">
+      <div class="katalog-kopf">
+        <h2>
+          <span>Verfügbare Spiele</span>
+          <span class="katalog-status-badge" id="katalog-zaehler">1 Spiel bereit</span>
+        </h2>
+      </div>
+
+      <!-- Dynamisch durch spiele_katalog.js befüllt -->
+      <div class="spiele-raster" id="spiele-raster">
+        <!-- Rendered by JavaScript -->
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================
+       MODAL: PLATTFORM-EINSTELLUNGEN
+       ======================================================== -->
+  <div id="plattform-einstellungen-modal" class="modal-overlay versteckt">
+    <div class="modal-kasten">
+      <div class="modal-kopf">
+        <h3><span>⚙️</span> Plattform-Einstellungen</h3>
+        <button id="einstellungen-schliessen-btn" class="modal-schliessen-btn">&times;</button>
+      </div>
+
+      <div class="modal-inhalt">
+        <!-- Spielername -->
+        <div class="einstellung-zeile" style="flex-direction: column; align-items: stretch; gap: 8px;">
+          <div class="zeile-info">
+            <span class="zeile-titel">Globaler Spielername</span>
+            <span class="zeile-sub">Wird automatisch in alle gestarteten Spiele übernommen</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="modal-spieler-name-input" class="form-eingabe" maxlength="16" placeholder="Dein Spielername">
+            <button id="modal-zufalls-name-btn" class="primaer-btn" title="Zufälliger Name">🎲</button>
+          </div>
+        </div>
+
+        <!-- Master Audio -->
+        <div class="einstellung-zeile">
+          <div class="zeile-info">
+            <span class="zeile-titel">Hintergrundmusik</span>
+            <span class="zeile-sub">Standardmäßig aktivieren</span>
+          </div>
+          <label class="schalter">
+            <input type="checkbox" id="modal-musik-schalter" checked>
+            <span class="schieber"></span>
+          </label>
+        </div>
+
+        <div class="einstellung-zeile">
+          <div class="zeile-info">
+            <span class="zeile-titel">Soundeffekte</span>
+            <span class="zeile-sub">Treffer, Schüsse & Aktionen</span>
+          </div>
+          <label class="schalter">
+            <input type="checkbox" id="modal-sound-schalter" checked>
+            <span class="schieber"></span>
+          </label>
+        </div>
+
+        <div class="regler-kasten">
+          <div class="regler-kopf">
+            <span class="zeile-titel">Master-Lautstärke</span>
+            <span id="modal-lautstaerke-wert" style="font-weight: bold; color: var(--akzent-gruen);">80 %</span>
+          </div>
+          <input type="range" id="modal-lautstaerke-regler" min="0" max="100" value="80" class="bereichs-regler">
+        </div>
+
+        <div class="einstellung-zeile" style="border: none; padding-top: 16px;">
+          <div class="zeile-info">
+            <span class="zeile-titel">SPIELBOX Version</span>
+            <span class="zeile-sub">v2.0 • Modulare Spieleplattform</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-fuss">
+        <button id="modal-speichern-btn" class="primaer-btn">Fertig</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       MODAL: APP INSTALLIEREN (PWA)
+       ======================================================== -->
+  <div id="plattform-install-modal" class="modal-overlay versteckt">
+    <div class="modal-kasten">
+      <div class="modal-kopf">
+        <h3><span>📱</span> SPIELBOX als App installieren</h3>
+        <button id="install-modal-schliessen-btn" class="modal-schliessen-btn">&times;</button>
+      </div>
+
+      <div class="modal-inhalt">
+        <!-- iOS Anleitung -->
+        <div id="install-anleitung-ios">
+          <p style="margin-bottom: 12px; font-size: 0.95rem;">
+            Installiere die <strong>SPIELBOX</strong> direkt auf deinem iPhone / iPad für flüssiges Vollbild-Gaming ohne Browserleisten:
+          </p>
+          <ol style="margin-left: 20px; line-height: 1.8; color: var(--text-gedimmt);">
+            <li>Tippe unten in Safari auf das <strong>Teilen-Symbol</strong> 📤.</li>
+            <li>Wähle in der Liste <strong>„Zum Home-Bildschirm“</strong> ➕.</li>
+            <li>Bestätige oben rechts mit <strong>„Hinzufügen“</strong>.</li>
+          </ol>
+        </div>
+
+        <!-- Android Button -->
+        <div id="install-anleitung-android" style="display: none; text-align: center; padding: 10px 0;">
+          <p style="margin-bottom: 16px; color: var(--text-gedimmt);">
+            Tippe auf den Button, um die SPIELBOX direkt auf deinem Smartphone zu installieren:
+          </p>
+          <button id="android-install-action-btn" class="primaer-btn" style="width: 100%; font-size: 1.05rem; padding: 14px;">
+            ✨ Jetzt installieren
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-fuss">
+        <button id="install-modal-fertig-btn" class="primaer-btn">Verstanden</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plattform-Skripte -->
+  <script src="/0_Spielbox/dienste/plattform_speicher.js"></script>
+  <script src="/0_Spielbox/dienste/pwa_dienst.js"></script>
+  <script src="/0_Spielbox/spiele_katalog.js"></script>
+  <script src="/0_Spielbox/spielbox.js"></script>
+</body>
+</html>

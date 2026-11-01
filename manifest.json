@@ -1,35 +1,35 @@
 {
-  "name": "Zombie Koop 2D",
-  "short_name": "ZombieKoop",
-  "description": "2D Zombie Koop Multiplayer-Spiel",
-  "start_url": "/1_Spiel/spiel.html",
+  "name": "SPIELBOX – Spieleplattform",
+  "short_name": "SPIELBOX",
+  "description": "Die modulare 2D-Multiplayer-Spieleplattform im Browser",
+  "start_url": "/",
   "scope": "/",
-  "id": "/1_Spiel/spiel.html",
+  "id": "/",
   "display": "standalone",
-  "orientation": "landscape",
-  "background_color": "#090d16",
-  "theme_color": "#090d16",
+  "orientation": "any",
+  "background_color": "#0a0f1d",
+  "theme_color": "#0a0f1d",
   "icons": [
     {
-      "src": "/1_Spiel/icon-192.png",
+      "src": "/0_Spielbox/grafiken/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/1_Spiel/icon-192.png",
+      "src": "/0_Spielbox/grafiken/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/1_Spiel/icon-512.png",
+      "src": "/0_Spielbox/grafiken/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/1_Spiel/icon-512.png",
+      "src": "/0_Spielbox/grafiken/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

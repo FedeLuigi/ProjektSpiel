@@ -435,18 +435,29 @@ function spielStarten() {
   window.addEventListener("touchstart", querformatAktivieren, { passive: true });
   document.addEventListener("fullscreenchange", querformatAktivieren);
 
-  // Spielername initialisieren (aus LocalStorage oder zufällig)
-  const gespeicherterName = localStorage.getItem("zombie_spieler_name");
-  if (gespeicherterName && gespeicherterName.trim()) {
-    spieler.name = gespeicherterName.trim();
-  } else {
-    spieler.name = zufallsNameGenerieren();
+  // Spielername initialisieren (aus PlattformSpeicher, LocalStorage oder zufällig)
+  let initialName = null;
+  if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.getSpielerName === "function") {
+    initialName = PlattformSpeicher.getSpielerName();
   }
+  if (!initialName) {
+    const gespeicherterName = localStorage.getItem("zombie_spieler_name");
+    if (gespeicherterName && gespeicherterName.trim()) {
+      initialName = gespeicherterName.trim();
+    } else {
+      initialName = zufallsNameGenerieren();
+    }
+  }
+  spieler.name = initialName;
+
   if (spielerNameInput) {
     spielerNameInput.value = spieler.name;
     spielerNameInput.addEventListener("input", () => {
       spieler.name = spielerNameInput.value.trim() || "Überlebender";
       localStorage.setItem("zombie_spieler_name", spieler.name);
+      if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.setSpielerName === "function") {
+        PlattformSpeicher.setSpielerName(spieler.name);
+      }
       if (erstellenSpielerNameVorschau) {
         erstellenSpielerNameVorschau.textContent = spieler.name;
       }
@@ -457,10 +468,15 @@ function spielStarten() {
   if (zufallsNameBtn && spielerNameInput) {
     zufallsNameBtn.addEventListener("click", () => {
       audioInitialisieren();
-      const neuerName = zufallsNameGenerieren();
+      const neuerName = (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.zufallsNameGenerieren === "function")
+        ? PlattformSpeicher.zufallsNameGenerieren()
+        : zufallsNameGenerieren();
       spielerNameInput.value = neuerName;
       spieler.name = neuerName;
       localStorage.setItem("zombie_spieler_name", neuerName);
+      if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.setSpielerName === "function") {
+        PlattformSpeicher.setSpielerName(neuerName);
+      }
       if (erstellenSpielerNameVorschau) {
         erstellenSpielerNameVorschau.textContent = neuerName;
       }
@@ -749,9 +765,9 @@ function spielStarten() {
     }
   });
 
-  // Initiale Ansicht: Hauptmenü oder Direktbeitritt bei ?raum=CODE
+  // Initiale Ansicht: Hauptmenü oder Direktbeitritt bei ?raum=CODE oder ?code=CODE
   const urlParameter = new URLSearchParams(window.location.search);
-  const raumUrlCode = urlParameter.get("raum");
+  const raumUrlCode = urlParameter.get("raum") || urlParameter.get("code");
   if (raumUrlCode) {
     if (beitretenCodeInput) beitretenCodeInput.value = raumUrlCode.trim().toUpperCase();
     ansichtWechseln("raum-beitreten");
@@ -1129,6 +1145,9 @@ function spielerNameInEinstellungenAendern() {
 
   spieler.name = neuerName;
   localStorage.setItem("zombie_spieler_name", neuerName);
+  if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.setSpielerName === "function") {
+    PlattformSpeicher.setSpielerName(neuerName);
+  }
 
   if (spielerNameInput) spielerNameInput.value = neuerName;
   if (erstellenSpielerNameVorschau) erstellenSpielerNameVorschau.textContent = neuerName;

@@ -38,6 +38,10 @@
         </div>
       </div>
       <div class="kopf-aktionen">
+        <a href="/0_Spielbox/spielbox.html" class="zurueck-nav-btn plattform-zurueck-btn" title="Zurück zur SPIELBOX" style="text-decoration: none;">
+          <span class="nav-pfeil">🎮</span>
+          <span>SPIELBOX</span>
+        </a>
         <button id="app-install-btn" class="app-install-btn versteckt" title="Als App auf dem Startbildschirm installieren">
           📱 App installieren
         </button>
@@ -320,6 +324,9 @@
             <button id="einstellungen-raum-verlassen-btn" class="menue-aktion-btn rot-leuchtend">
               🚪 Spielraum verlassen
             </button>
+            <a href="/0_Spielbox/spielbox.html" id="einstellungen-zur-spielbox-btn" class="menue-aktion-btn" style="text-decoration: none; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(255,255,255,0.08);">
+              🎮 Zurück zur SPIELBOX
+            </a>
           </div>
         </div>
 
@@ -503,6 +510,7 @@
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Module des Spiels -->
+  <script src="/0_Spielbox/dienste/plattform_speicher.js"></script>
   <script src="../3_Spieleinstellungen/einstellungen.js"></script>
   <script src="../2_Multiplayer/verbindung.js"></script>
   <script src="spiel.js"></script>
