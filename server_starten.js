@@ -106,6 +106,18 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 6. Schuss eines Spielers empfangen und synchronisieren
+  socket.on('schussAbfeuern', (schussDaten) => {
+    socket.broadcast.emit('schussAbgefeuert', {
+      spielerId: socket.id,
+      x: schussDaten.x,
+      y: schussDaten.y,
+      vx: schussDaten.vx,
+      vy: schussDaten.vy,
+      winkel: schussDaten.winkel
+    });
+  });
+
   // 6. Wenn ein Spieler das Browserfenster schließt / das Spiel verlässt
   socket.on('disconnect', () => {
     console.log(`[Multiplayer] Spieler verlassen: ID ${socket.id}`);

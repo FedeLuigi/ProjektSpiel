@@ -8,8 +8,9 @@ class MultiplayerVerbindung {
     this.andereSpieler = {}; // Map: id -> Spielerobjekt
     this.letzteGesendeteDaten = { x: null, y: null, blickrichtung: null };
 
-    // Callback-Funktion, um das Hauptspiel über den Start zu benachrichtigen
+    // Callback-Funktionen
     this.onInitialisiert = callbacks.onInitialisiert || null;
+    this.onSchussEmpfangen = callbacks.onSchussEmpfangen || null;
 
     this.initialisieren();
   }
@@ -80,6 +81,13 @@ class MultiplayerVerbindung {
         this.spielerAnzahlAktualisieren(anzahl);
       });
 
+      // 6. Schuss eines anderen Spielers empfangen
+      this.socket.on("schussAbgefeuert", (schussDaten) => {
+        if (typeof this.onSchussEmpfangen === "function") {
+          this.onSchussEmpfangen(schussDaten);
+        }
+      });
+
     } catch (fehler) {
       console.error("[Multiplayer] Verbindungsfehler:", fehler);
       this.statusAktualisieren(false, "Fehler");
@@ -100,6 +108,12 @@ class MultiplayerVerbindung {
       this.letzteGesendeteDaten = { x, y, winkel: winkelGerundet, blickrichtung };
       this.socket.emit("spielerBewegung", { x, y, winkel: winkelGerundet, blickrichtung });
     }
+  }
+
+  // Sendet einen abgefeuerten Schuss an den Server
+  sendeSchuss(schussDaten) {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("schussAbfeuern", schussDaten);
   }
 
   // Gibt alle anderen verbundenen Spieler als Array zurück
