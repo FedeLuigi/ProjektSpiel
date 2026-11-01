@@ -18,6 +18,7 @@ const STATISCHE_DATEIEN = [
   '/0_Spielbox/grafiken/icon-512.png',
   '/0_Spielbox/grafiken/apple-touch-icon.png',
   '/0_Spielbox/grafiken/favicon.png',
+  '/0_Spielbox/grafiken/favicon.svg',
   '/1_Spiel/spiel.html',
   '/1_Spiel/design.css',
   '/1_Spiel/spiel.js',

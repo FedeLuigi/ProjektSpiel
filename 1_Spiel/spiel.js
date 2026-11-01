@@ -450,44 +450,39 @@ function spielStarten() {
   }
   spieler.name = initialName;
 
-  if (spielerNameInput) {
-    spielerNameInput.value = spieler.name;
-    spielerNameInput.addEventListener("input", () => {
-      spieler.name = spielerNameInput.value.trim() || "Überlebender";
-      localStorage.setItem("zombie_spieler_name", spieler.name);
-      if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.setSpielerName === "function") {
-        PlattformSpeicher.setSpielerName(spieler.name);
-      }
-      if (erstellenSpielerNameVorschau) {
-        erstellenSpielerNameVorschau.textContent = spieler.name;
-      }
-    });
-  }
+  // Profil-Anzeige im Menü aktualisieren
+  const menueSpielerNameBadge = document.getElementById("menue-spieler-name-badge");
+  const menueNameEinstellungenBtn = document.getElementById("menue-name-einstellungen-btn");
 
-  // Würfel-Button für zufälligen Spielernamen
-  if (zufallsNameBtn && spielerNameInput) {
-    zufallsNameBtn.addEventListener("click", () => {
+  window.menueSpielerNameAktualisieren = function() {
+    if (menueSpielerNameBadge) {
+      menueSpielerNameBadge.textContent = spieler.name;
+    }
+    if (einstellungSpielerName) {
+      einstellungSpielerName.value = spieler.name;
+    }
+    if (erstellenSpielerNameVorschau) {
+      erstellenSpielerNameVorschau.textContent = spieler.name;
+    }
+  };
+
+  window.menueSpielerNameAktualisieren();
+
+  // Zahnrad-Klick im Menü öffnet direkt Einstellungen -> Tab Spieler
+  if (menueNameEinstellungenBtn) {
+    menueNameEinstellungenBtn.addEventListener("click", () => {
       audioInitialisieren();
-      const neuerName = (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.zufallsNameGenerieren === "function")
-        ? PlattformSpeicher.zufallsNameGenerieren()
-        : zufallsNameGenerieren();
-      spielerNameInput.value = neuerName;
-      spieler.name = neuerName;
-      localStorage.setItem("zombie_spieler_name", neuerName);
-      if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.setSpielerName === "function") {
-        PlattformSpeicher.setSpielerName(neuerName);
-      }
-      if (erstellenSpielerNameVorschau) {
-        erstellenSpielerNameVorschau.textContent = neuerName;
-      }
+      einstellungenOeffnen();
+      const tabSpielerBtn = document.querySelector('.tab-btn[data-tab="tab-spieler"]');
+      if (tabSpielerBtn) tabSpielerBtn.click();
     });
   }
 
-  // Navigation: Hauptmenü -> Raum erstellen
+  // Navigation: Hauptmenü -> Raum erstellen (Direkt starten ohne überflüssiges Zwischenfenster!)
   if (navRaumErstellenBtn) {
     navRaumErstellenBtn.addEventListener("click", () => {
       audioInitialisieren();
-      ansichtWechseln("raum-erstellen");
+      multiplayerVerbindung.raumErstellen(spieler.name);
     });
   }
 
@@ -510,7 +505,7 @@ function spielStarten() {
   if (beitretenZurueckBtn) beitretenZurueckBtn.addEventListener("click", zurueckZumHauptmenue);
   if (beitretenAbbrechenBtn) beitretenAbbrechenBtn.addEventListener("click", zurueckZumHauptmenue);
 
-  // Aktion: Raum erstellen ausführen
+  // Fallback: Raum erstellen ausführen
   if (raumErstellenAusfuehrenBtn) {
     raumErstellenAusfuehrenBtn.addEventListener("click", () => {
       audioInitialisieren();
@@ -1147,6 +1142,10 @@ function spielerNameInEinstellungenAendern() {
   localStorage.setItem("zombie_spieler_name", neuerName);
   if (typeof PlattformSpeicher !== "undefined" && typeof PlattformSpeicher.setSpielerName === "function") {
     PlattformSpeicher.setSpielerName(neuerName);
+  }
+
+  if (typeof window.menueSpielerNameAktualisieren === "function") {
+    window.menueSpielerNameAktualisieren();
   }
 
   if (spielerNameInput) spielerNameInput.value = neuerName;
