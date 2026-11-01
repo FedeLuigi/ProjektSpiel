@@ -656,7 +656,7 @@ function spielStarten() {
       aktiveZombies = [];
 
       bannerZeigen("LEVEL 1", "Überlebe die Zombie-Welle gemeinsam!", 3500);
-      soundEffektWelleStart();
+      // Signalhorn wird sauber vom nachfolgenden Event onWelleGestartet abgespielt
     },
 
     onSchussEmpfangen: (schussDaten) => {
@@ -691,13 +691,24 @@ function spielStarten() {
       }
     },
 
-    // Spieler wiederbelebt
+    // Spieler wiederbelebt (mit sicherem Spawnpunkt & 2s Schutz)
     onSpielerRespawn: (daten) => {
+      const schutzDauer = daten.schutzDauerMs || 2000;
+      const schutzEnde = daten.schutzBis || (Date.now() + schutzDauer);
+
       if (daten.spielerId === spieler.id) {
         spieler.hp = daten.hp;
         spieler.x = daten.x;
         spieler.y = daten.y;
+        spieler.schutzBis = schutzEnde;
         lebenAktualisieren(spieler.hp);
+        soundEffektRespawn();
+      } else if (multiplayerVerbindung && multiplayerVerbindung.andereSpieler[daten.spielerId]) {
+        const s = multiplayerVerbindung.andereSpieler[daten.spielerId];
+        s.hp = daten.hp;
+        s.x = daten.x;
+        s.y = daten.y;
+        s.schutzBis = schutzEnde;
       }
     },
 
@@ -811,42 +822,86 @@ function lautstaerkeAktualisieren() {
   }
 }
 
-// Düsterer Ambient-Soundtrack für atmosphärisches Zombie-Feeling
+// Düsterer, stimmungsvoller Ambient-Soundtrack ohne störendes Dauersummen
+let musikIntervallTimer = null;
+let musikAkkordIndex = 0;
+let aktiveMusikOszillatoren = [];
+
+// Harmonische Akkorde für authentische Zombie-Survival-Atmosphäre (D-Moll / C-Dur / B / A-Moll)
+const AMBIENT_AKKORDE = [
+  [73.42, 110.00, 174.61], // D2, A2, F3
+  [65.41, 98.00, 164.81],  // C2, G2, E3
+  [58.27, 87.31, 146.83],  // Bb1, F2, D3
+  [55.00, 82.41, 130.81]   // A1, E2, C3
+];
+
+function ambientAkkordAbspielen() {
+  if (!audioKontext || !musikGainNode || !benutzerEinstellungen.musik) return;
+
+  try {
+    const jetzt = audioKontext.currentTime;
+    const akkord = AMBIENT_AKKORDE[musikAkkordIndex];
+    musikAkkordIndex = (musikAkkordIndex + 1) % AMBIENT_AKKORDE.length;
+
+    // Alte Oszillatoren leeren
+    aktiveMusikOszillatoren = [];
+
+    akkord.forEach((freq, idx) => {
+      const osc = audioKontext.createOscillator();
+      const noteGain = audioKontext.createGain();
+      const filter = audioKontext.createBiquadFilter();
+
+      // Weiche Dreiecks- und Sinus-Wellen für unaufdringlichen, harmonischen Soundtrack
+      osc.type = idx === 0 ? "sine" : "triangle";
+      osc.frequency.setValueAtTime(freq, jetzt);
+
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(320, jetzt);
+
+      // Sanftes Ein- und Ausblenden (Attack: 1.2s, Decay/Release: 2.6s)
+      noteGain.gain.setValueAtTime(0.0001, jetzt);
+      noteGain.gain.linearRampToValueAtTime(0.12, jetzt + 1.2);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, jetzt + 3.8);
+
+      osc.connect(filter);
+      filter.connect(noteGain);
+      noteGain.connect(musikGainNode);
+
+      osc.start(jetzt);
+      osc.stop(jetzt + 3.9);
+      aktiveMusikOszillatoren.push({ osc, noteGain });
+    });
+  } catch (e) {}
+}
+
 function hintergrundMusikAktualisieren() {
   if (!audioKontext || !musikGainNode) return;
 
   if (benutzerEinstellungen.musik) {
-    if (!musikQuelleNode) {
-      try {
-        const osc1 = audioKontext.createOscillator();
-        const osc2 = audioKontext.createOscillator();
-        const filter = audioKontext.createBiquadFilter();
-
-        osc1.type = "sawtooth";
-        osc1.frequency.setValueAtTime(55, audioKontext.currentTime); // Sub-Bass
-
-        osc2.type = "sine";
-        osc2.frequency.setValueAtTime(55.8, audioKontext.currentTime); // Unheimliche Schwebung
-
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(170, audioKontext.currentTime);
-
-        osc1.connect(filter);
-        osc2.connect(filter);
-        filter.connect(musikGainNode);
-
-        osc1.start();
-        osc2.start();
-        musikQuelleNode = { osc1, osc2, filter };
-      } catch (e) {
-        console.warn("[Audio] Hintergrundmusik Synthese fehlgeschlagen:", e);
-      }
+    if (!musikIntervallTimer) {
+      ambientAkkordAbspielen();
+      musikIntervallTimer = setInterval(() => {
+        ambientAkkordAbspielen();
+      }, 4000);
     }
+  } else {
+    // Musik vollständig stoppen
+    if (musikIntervallTimer) {
+      clearInterval(musikIntervallTimer);
+      musikIntervallTimer = null;
+    }
+    aktiveMusikOszillatoren.forEach(item => {
+      try {
+        item.noteGain.gain.setValueAtTime(0, audioKontext.currentTime);
+        item.osc.stop();
+      } catch (e) {}
+    });
+    aktiveMusikOszillatoren = [];
   }
   lautstaerkeAktualisieren();
 }
 
-function soundEffektSchuss() {
+function soundEffektSchuss(lautstaerkeFaktor = 1.0) {
   if (!audioKontext || !benutzerEinstellungen.sound) return;
   try {
     audioSystemEinrichten();
@@ -867,7 +922,8 @@ function soundEffektSchuss() {
     filter.frequency.exponentialRampToValueAtTime(300, jetzt + 0.06);
 
     const gainNode = audioKontext.createGain();
-    gainNode.gain.setValueAtTime(0.25, jetzt);
+    const pegel = 0.25 * Math.max(0.1, Math.min(1.0, lautstaerkeFaktor));
+    gainNode.gain.setValueAtTime(pegel, jetzt);
     gainNode.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.06);
 
     rauschQuelle.connect(filter);
@@ -877,8 +933,14 @@ function soundEffektSchuss() {
   } catch (e) {}
 }
 
+let letzterTrefferSoundZeit = 0;
+
 function soundEffektTreffer() {
   if (!audioKontext || !benutzerEinstellungen.sound) return;
+  const jetztZeit = Date.now();
+  if (jetztZeit - letzterTrefferSoundZeit < 120) return; // Entprellung gegen schnelles Doppel-Abspielen
+  letzterTrefferSoundZeit = jetztZeit;
+
   try {
     audioSystemEinrichten();
     const jetzt = audioKontext.currentTime;
@@ -888,13 +950,37 @@ function soundEffektTreffer() {
     osc.frequency.setValueAtTime(120, jetzt);
     osc.frequency.exponentialRampToValueAtTime(40, jetzt + 0.1);
 
-    gain.gain.setValueAtTime(0.3, jetzt);
+    gain.gain.setValueAtTime(0.25, jetzt);
     gain.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.1);
 
     osc.connect(gain);
     gain.connect(sfxGainNode || audioKontext.destination);
     osc.start(jetzt);
     osc.stop(jetzt + 0.1);
+  } catch (e) {}
+}
+
+// Aufmunternder, klarer Ton beim Respawn mit aktivem Schutzschild
+function soundEffektRespawn() {
+  if (!audioKontext || !benutzerEinstellungen.sound) return;
+  try {
+    audioSystemEinrichten();
+    const jetzt = audioKontext.currentTime;
+    const toene = [392.00, 523.25]; // G4, C5 (Hoffnungsvolles Signal)
+    toene.forEach((freq, idx) => {
+      const osc = audioKontext.createOscillator();
+      const gain = audioKontext.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, jetzt + idx * 0.14);
+
+      gain.gain.setValueAtTime(0.18, jetzt + idx * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.01, jetzt + idx * 0.14 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(sfxGainNode || audioKontext.destination);
+      osc.start(jetzt + idx * 0.14);
+      osc.stop(jetzt + idx * 0.14 + 0.35);
+    });
   } catch (e) {}
 }
 
@@ -920,9 +1006,15 @@ function soundEffektLevelGeschafft() {
   } catch (e) {}
 }
 
-// Bedrohliches Signalhorn beim Start einer neuen Welle
+let letzteWelleStartSoundZeit = 0;
+
+// Bedrohliches Signalhorn beim Start einer neuen Welle (mit Entprellung)
 function soundEffektWelleStart() {
   if (!audioKontext || !benutzerEinstellungen.sound) return;
+  const jetztZeit = Date.now();
+  if (jetztZeit - letzteWelleStartSoundZeit < 1000) return; // Verhindert versehentliches doppeltes Abspielen
+  letzteWelleStartSoundZeit = jetztZeit;
+
   try {
     audioSystemEinrichten();
     const jetzt = audioKontext.currentTime;
@@ -931,7 +1023,7 @@ function soundEffektWelleStart() {
     osc.type = "sawtooth";
     osc.frequency.setValueAtTime(140, jetzt);
     osc.frequency.linearRampToValueAtTime(95, jetzt + 0.4);
-    gain.gain.setValueAtTime(0.22, jetzt);
+    gain.gain.setValueAtTime(0.20, jetzt);
     gain.gain.exponentialRampToValueAtTime(0.01, jetzt + 0.45);
     osc.connect(gain);
     gain.connect(sfxGainNode || audioKontext.destination);
@@ -1525,7 +1617,7 @@ function fremdenSchussErzeugen(schuss) {
   if (multiplayerVerbindung && multiplayerVerbindung.andereSpieler[schuss.spielerId]) {
     multiplayerVerbindung.andereSpieler[schuss.spielerId].muendungsfeuer = 3;
   }
-  soundEffektSchuss();
+  soundEffektSchuss(0.4);
 }
 
 // 6. Blutspritzer und Treffer-Partikel
@@ -1873,8 +1965,19 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
   const winkel = f.winkel || 0;
   const farbe = f.farbe || Spieleinstellungen.spieler.standardFarbe;
 
+  const jetzt = Date.now();
+  const istGeschuetzt = f.schutzBis && jetzt < f.schutzBis;
+
   ctx.save();
   ctx.translate(x, y);
+
+  // Dezentes Blinken des Spielers während der 2-Sekunden-Immunität
+  if (istGeschuetzt) {
+    const blinkPhase = Math.floor(jetzt / 110) % 2 === 0;
+    if (blinkPhase) {
+      ctx.globalAlpha = 0.5;
+    }
+  }
 
   if (benutzerEinstellungen.taschenlampe) {
     taschenlampeZeichnen(winkel);
@@ -1947,6 +2050,37 @@ function topDownFigurZeichnen(f, istEigenerSpieler) {
   ctx.shadowBlur = 4;
   ctx.fillText(istEigenerSpieler ? "Du" : (f.name || "Spieler"), x, y - r - 8);
   ctx.restore();
+
+  // Optischer 2-Sekunden-Schutzschild mit Pulsieren und Schild-Symbol
+  if (istGeschuetzt) {
+    ctx.save();
+    const verbleibendMs = f.schutzBis - jetzt;
+    const pulsTempo = verbleibendMs < 600 ? 55 : 110;
+    const puls = 0.45 + 0.45 * Math.sin(jetzt / pulsTempo);
+
+    // 1. Äußerer leuchtender Schutzschild-Ring
+    ctx.beginPath();
+    ctx.arc(x, y, r + 9, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(56, 189, 248, ${puls})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = "#38bdf8";
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+
+    // 2. Dezente innere Schutz-Aura
+    ctx.fillStyle = `rgba(56, 189, 248, ${puls * 0.16})`;
+    ctx.fill();
+
+    // 3. Schutz-Badge über dem Namensschild
+    ctx.font = "bold 10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.fillStyle = "#38bdf8";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 6;
+    ctx.fillText("🛡️ SCHUTZ", x, y - r - 22);
+    ctx.restore();
+  }
 }
 
 function taschenlampeZeichnen(winkel) {
@@ -1984,7 +2118,7 @@ function totenBildschirmZeichnen() {
 
   ctx.font = "14px sans-serif";
   ctx.fillStyle = "#e2e8f0";
-  ctx.fillText("Respawn in Kürze...", canvas.width / 2, canvas.height / 2 + 20);
+  ctx.fillText("Respawn an sicherer Position in Kürze (inkl. 2s Schutz)...", canvas.width / 2, canvas.height / 2 + 20);
   ctx.restore();
 }
 
