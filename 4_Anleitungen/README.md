@@ -1,27 +1,44 @@
-# ProjektSpiel 🎮
+# ProjektSpiel 🎮 – Öffentliche 2D-Multiplayer-Spielwelt
 
-Ein einfaches, erweiterbares 2D-Browser-Spiel mit Socket.IO-Vorbereitung für Mehrspieler.
+Ein öffentliches, leichtgewichtiges 2D-Multiplayer-Browserspiel auf Basis von **HTML5 Canvas**, **JavaScript**, **Node.js** und **Socket.IO**.
+
+---
+
+## 🌟 Spielprinzip
+
+- **Ein einziger öffentlicher Link**: Jeder Spieler öffnet dieselbe Adresse.
+- **Keine Anmeldung**: Sofort losspielen ohne Registrierung oder Passwörter.
+- **Keine privaten Räume**: Alle Spieler betreten automatisch eine zentrale, gemeinsame Spielwelt.
+- **Automatische Spielfigur**: Jeder Spieler erhält beim Verbinden eine eigene Figur mit individueller Farbe und Kennung.
+- **Echtzeit-Synchronisation**: Alle Bewegungen werden in Echtzeit über Socket.IO übertragen.
+- **Automatisches Verlassen**: Schließt ein Spieler das Browserfenster, verschwindet seine Figur sofort bei allen Mitspielern.
 
 ---
 
 ## 🚀 Spiel starten
 
-### 1. Abhängigkeiten installieren (einmalig)
-Falls noch nicht geschehen, im Terminal im Projektordner ausführen:
-```bash
-npm install
-```
-
-### 2. Server starten
-Starte den Server mit:
+### 1. Server starten
 ```bash
 node server_starten.js
 ```
-*(Alternativ geht auch `npm start`)*
+*(oder `npm start`)*
 
-### 3. Im Browser öffnen
-Öffne deinen Webbrowser und rufe folgende Adresse auf:
-👉 **[http://localhost:3000](http://localhost:3000)**
+### 2. Im Browser öffnen
+Gehe auf: 👉 **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+## 👥 Multiplayer lokal testen (2 Browserfenster)
+
+1. Starte den Server (`node server_starten.js`).
+2. Öffne **Fenster 1**: [http://localhost:3000](http://localhost:3000)
+   - Deine Spielfigur hat das Schild **"Du"** und eine eigene Farbe.
+   - Der Zähler zeigt **"1 Spieler online"**.
+3. Öffne **Fenster 2** (z.B. ein zweites Tab, Inkognito-Fenster oder ein anderer Browser): [http://localhost:3000](http://localhost:3000)
+   - Eine zweite Spielfigur mit anderer Farbe erscheint sofort in beiden Fenstern.
+   - Der Zähler schaltet in beiden Fenstern auf **"2 Spieler online"**.
+4. Bewege Spieler 1 mit `WASD` – in Fenster 2 siehst du die Figur flüssig in Echtzeit mitgehen!
+5. Schließe Fenster 2 – in Fenster 1 verschwindet die Figur sofort und der Zähler sinkt wieder auf 1.
 
 ---
 
@@ -29,30 +46,30 @@ node server_starten.js
 
 | Taste | Aktion |
 |---|---|
-| **W** oder **Pfeiltaste Oben (▲)** | Nach oben bewegen |
-| **S** oder **Pfeiltaste Unten (▼)** | Nach unten bewegen |
-| **A** oder **Pfeiltaste Links (◄)** | Nach links bewegen |
-| **D** oder **Pfeiltaste Rechts (►)** | Nach rechts bewegen |
+| **W** / **▲ (Pfeil Oben)** | Nach oben |
+| **S** / **▼ (Pfeil Unten)** | Nach unten |
+| **A** / **◄ (Pfeil Links)** | Nach links |
+| **D** / **► (Pfeil Rechts)** | Nach rechts |
 
 ---
 
-## 📁 Projektstruktur
+## 📁 Ordnerstruktur
 
 ```text
 ProjektSpiel/
 │
 ├── 1_Spiel/                     # Spielfeld, Layout und Spiellogik
-│   ├── spiel.html               # Webseite und Spiel-Canvas
-│   ├── design.css               # Schönes modernes Dark-Design
-│   └── spiel.js                 # 2D-Spielwelt, Bewegung & Kollision
+│   ├── spiel.html               # Webseite & Canvas
+│   ├── design.css               # Modernes Dark-Theme
+│   └── spiel.js                 # 2D-Rendering aller Figuren & Game Loop
 │
-├── 2_Multiplayer/               # Mehrspieler-Modul
-│   └── verbindung.js            # Socket.IO Client-Verbindung
+├── 2_Multiplayer/               # Netzwerk-Modul
+│   └── verbindung.js            # Socket.IO Client (Synchronisation & Events)
 │
 ├── 3_Spieleinstellungen/        # Konfiguration
-│   └── einstellungen.js         # Spielweltgröße, Farben, Tempo
+│   └── einstellungen.js         # Weltmaße, Farben & Tempo
 │
-├── 4_Anleitungen/               # Anleitungen & Dokumentation
+├── 4_Anleitungen/               # Dokumentation
 │   └── README.md                # Diese Anleitung
 │
 ├── server_starten.js            # Node.js Server mit Express & Socket.IO
@@ -61,9 +78,9 @@ ProjektSpiel/
 
 ---
 
-## ✨ Bereits integrierte Funktionen
-- **2D-Spielwelt**: Flüssiges HTML5 Canvas mit dezentem Raster.
-- **Spielfigur**: Startet exakt zentriert in der Mitte des Spielfelds.
-- **Steuerung**: Vollständige Unterstützung von WASD und Pfeiltasten inkl. diagonaler Bewegung.
-- **Kollisionserkennung**: Die Figur kann die Ränder des Spielfelds nicht verlassen.
-- **Socket.IO Vorbereitung**: Verbindung zum Server wird automatisch hergestellt, Verbindungsstatus wird angezeigt und Positionswechsel werden an den Server übermittelt.
+## 🌐 Vorbereitung für Online-Hosting
+
+Das Projekt ist bereits für Cloud-Hoster (wie z.B. **Render**, **Railway**, **Fly.io** oder eigene vServer) vorbereitet:
+- Verwendet Umgebungsvariable `process.env.PORT || 3000`.
+- Socket.IO mit freigegebenen CORS-Einstellungen (`origin: "*"`).
+- Kann mit einem einzigen Befehl (`npm start`) in jeder Cloud ausgeführt werden.

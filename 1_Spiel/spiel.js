@@ -1,31 +1,32 @@
-// Hauptlogik des 2D-Spiels
+// Hauptlogik des 2D-Multiplayer-Spiels
 
 // 1. Initialisierung und Variablen
 let canvas = null;
 let ctx = null;
 let positionsAnzeige = null;
 
-// Status der gedrückten Tasten (für flüssige diagonale Bewegung)
+// Tastaturstatus für flüssige Bewegungen (auch diagonal)
 const aktiveTasten = {};
 
-// Spielfigur-Objekt
+// Eigene Spielfigur (wird bei Serververbindung mit den Serverdaten synchronisiert)
 const spieler = {
-  x: 0,
-  y: 0,
+  id: "lokal",
+  name: "Du",
+  x: (Spieleinstellungen.weltBreite - Spieleinstellungen.spieler.breite) / 2,
+  y: (Spieleinstellungen.weltHoehe - Spieleinstellungen.spieler.hoehe) / 2,
   breite: Spieleinstellungen.spieler.breite,
   hoehe: Spieleinstellungen.spieler.hoehe,
   geschwindigkeit: Spieleinstellungen.spieler.geschwindigkeit,
-  farbe: Spieleinstellungen.spieler.farbe,
+  farbe: Spieleinstellungen.spieler.standardFarbe,
   blickrichtung: "rechts" // "hoch", "runter", "links", "rechts"
 };
 
-// 2. Start der Anwendung, sobald das DOM geladen ist
+// 2. Start sobald das DOM geladen ist
 document.addEventListener("DOMContentLoaded", () => {
   spielStarten();
 });
 
 function spielStarten() {
-  // Canvas-Element abrufen und konfigurieren
   canvas = document.getElementById("spielFeld");
   ctx = canvas.getContext("2d");
   positionsAnzeige = document.getElementById("spieler-pos");
@@ -33,127 +34,137 @@ function spielStarten() {
   canvas.width = Spieleinstellungen.weltBreite;
   canvas.height = Spieleinstellungen.weltHoehe;
 
-  // Spielfigur genau in der Mitte der Spielwelt platzieren
-  spieler.x = (canvas.width - spieler.breite) / 2;
-  spieler.y = (canvas.height - spieler.hoehe) / 2;
-
-  // Tastatur-Events registrieren (WASD und Pfeiltasten)
+  // Tastatureingaben aktivieren
   tastaturEreignisseRegistrieren();
 
-  // Multiplayer-Verbindung initialisieren (Vorbereitung für Mehrspieler)
-  multiplayerVerbindung = new MultiplayerVerbindung();
+  // Multiplayer-Verbindung aufbauen und Callback für Server-Startdaten registrieren
+  multiplayerVerbindung = new MultiplayerVerbindung({
+    onInitialisiert: (eigenerServerSpieler) => {
+      // Übernehme die vom Server zugewiesene Farbe, Position und ID
+      spieler.id = eigenerServerSpieler.id;
+      spieler.x = eigenerServerSpieler.x;
+      spieler.y = eigenerServerSpieler.y;
+      spieler.farbe = eigenerServerSpieler.farbe;
+      spieler.blickrichtung = eigenerServerSpieler.blickrichtung || "rechts";
+      console.log(`[Spiel] Eingeloggt als ${spieler.name} (${spieler.farbe})`);
+    }
+  });
 
-  // Den Game Loop starten
+  // Spielschleife starten
   requestAnimationFrame(gameLoop);
 }
 
-// 3. Tastatureingaben verarbeiten
+// 3. Tastatureingaben verarbeiten (WASD und Pfeiltasten)
 function tastaturEreignisseRegistrieren() {
   window.addEventListener("keydown", (e) => {
-    // Taste als aktiv markieren
     aktiveTasten[e.key.toLowerCase()] = true;
     aktiveTasten[e.code] = true;
 
-    // Verhindert das Scrollen der Seite bei den Pfeiltasten
+    // Kein Browser-Scrollen bei Pfeiltasten oder Leertaste
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
       e.preventDefault();
     }
   });
 
   window.addEventListener("keyup", (e) => {
-    // Taste als inaktiv markieren
     aktiveTasten[e.key.toLowerCase()] = false;
     aktiveTasten[e.code] = false;
   });
 }
 
-// 4. Spielfigur bewegen und Rand-Kollision prüfen
+// 4. Spielfigur bewegen und Grenzen einhalten
 function spielerAktualisieren() {
   let hatSichBewegt = false;
 
-  // Bewegung nach oben: W oder Pfeiltaste Oben
+  // Nach oben: W oder Pfeil Oben
   if (aktiveTasten["w"] || aktiveTasten["arrowup"]) {
     spieler.y -= spieler.geschwindigkeit;
     spieler.blickrichtung = "hoch";
     hatSichBewegt = true;
   }
 
-  // Bewegung nach unten: S oder Pfeiltaste Unten
+  // Nach unten: S oder Pfeil Unten
   if (aktiveTasten["s"] || aktiveTasten["arrowdown"]) {
     spieler.y += spieler.geschwindigkeit;
     spieler.blickrichtung = "runter";
     hatSichBewegt = true;
   }
 
-  // Bewegung nach links: A oder Pfeiltaste Links
+  // Nach links: A oder Pfeil Links
   if (aktiveTasten["a"] || aktiveTasten["arrowleft"]) {
     spieler.x -= spieler.geschwindigkeit;
     spieler.blickrichtung = "links";
     hatSichBewegt = true;
   }
 
-  // Bewegung nach rechts: D oder Pfeiltaste Rechts
+  // Nach rechts: D oder Pfeil Rechts
   if (aktiveTasten["d"] || aktiveTasten["arrowright"]) {
     spieler.x += spieler.geschwindigkeit;
     spieler.blickrichtung = "rechts";
     hatSichBewegt = true;
   }
 
-  // Randbegrenzung (Kollisionsprüfung mit der Spielfeldgrenze)
-  // 1. Linker Rand
+  // Rand-Kollision (Figur darf das Spielfeld nicht verlassen)
   if (spieler.x < 0) {
     spieler.x = 0;
   }
-  // 2. Rechter Rand
   if (spieler.x + spieler.breite > canvas.width) {
     spieler.x = canvas.width - spieler.breite;
   }
-  // 3. Oberer Rand
   if (spieler.y < 0) {
     spieler.y = 0;
   }
-  // 4. Unterer Rand
   if (spieler.y + spieler.hoehe > canvas.height) {
     spieler.y = canvas.height - spieler.hoehe;
   }
 
-  // Positionsanzeige im UI aktualisieren
+  // Anzeige der aktuellen Koordinaten im UI
   if (positionsAnzeige) {
     positionsAnzeige.textContent = `X: ${Math.round(spieler.x)} | Y: ${Math.round(spieler.y)}`;
   }
 
-  // Bei Bewegung die Position an den Multiplayer-Server übermitteln
+  // Bewegung in Echtzeit an den Multiplayer-Server übertragen
   if (hatSichBewegt && multiplayerVerbindung) {
-    multiplayerVerbindung.sendePosition(Math.round(spieler.x), Math.round(spieler.y));
+    multiplayerVerbindung.sendeBewegung(
+      Math.round(spieler.x),
+      Math.round(spieler.y),
+      spieler.blickrichtung
+    );
   }
 }
 
-// 5. Zeichnen der Spielwelt
+// 5. Spielwelt und alle Spieler zeichnen
 function zeichnen() {
-  // Hintergrund löschen
+  // Hintergrund leeren
   ctx.fillStyle = Spieleinstellungen.design.hintergrundFarbe;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Einfaches Gitter für Orientierung zeichnen
+  // Orientierungsraster zeichnen
   gitterZeichnen();
 
-  // Spielfigur zeichnen
-  spielerZeichnen();
+  // 1. Alle anderen Mitspieler zeichnen
+  if (multiplayerVerbindung) {
+    const andere = multiplayerVerbindung.getAndereSpieler();
+    for (const mitspieler of andere) {
+      figurZeichnen(mitspieler, false);
+    }
+  }
+
+  // 2. Eigene Spielfigur hervorheben und zeichnen
+  figurZeichnen(spieler, true);
 }
 
-// Zeichnet ein dezentes Orientierungsgitter
+// Zeichnet das Orientierungsraster
 function gitterZeichnen() {
   const gitterGroesse = Spieleinstellungen.design.gitterGroesse;
   ctx.strokeStyle = Spieleinstellungen.design.gitterFarbe;
   ctx.lineWidth = 1;
 
   ctx.beginPath();
-  // Vertikale Linien
   for (let x = gitterGroesse; x < canvas.width; x += gitterGroesse) {
     ctx.moveTo(x, 0);
     ctx.lineTo(x, canvas.height);
   }
-  // Horizontale Linien
   for (let y = gitterGroesse; y < canvas.height; y += gitterGroesse) {
     ctx.moveTo(0, y);
     ctx.lineTo(canvas.width, y);
@@ -161,36 +172,45 @@ function gitterZeichnen() {
   ctx.stroke();
 }
 
-// Zeichnet die Spielfigur mit abgerundeten Ecken und Augen
-function spielerZeichnen() {
+// Zeichnet eine beliebige Spielfigur (eigene oder fremde)
+function figurZeichnen(f, istEigenerSpieler) {
+  const x = f.x;
+  const y = f.y;
+  const w = f.breite || Spieleinstellungen.spieler.breite;
+  const h = f.hoehe || Spieleinstellungen.spieler.hoehe;
   const radius = 8;
-  const x = spieler.x;
-  const y = spieler.y;
-  const w = spieler.breite;
-  const h = spieler.hoehe;
 
-  // Körper der Spielfigur (abgerundetes Rechteck)
   ctx.save();
-  ctx.fillStyle = spieler.farbe;
-  ctx.shadowColor = "rgba(78, 154, 241, 0.5)";
-  ctx.shadowBlur = 10;
+
+  // Körper zeichnen
+  ctx.fillStyle = f.farbe || "#3b82f6";
+
+  if (istEigenerSpieler) {
+    // Eigene Figur leuchtet dezent zur besseren Erkennbarkeit
+    ctx.shadowColor = f.farbe;
+    ctx.shadowBlur = 12;
+  }
 
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, radius);
   ctx.fill();
 
   // Kontur
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = istEigenerSpieler ? "#ffffff" : "rgba(255, 255, 255, 0.4)";
+  ctx.lineWidth = istEigenerSpieler ? 2.5 : 1.5;
   ctx.stroke();
+
   ctx.restore();
 
   // Augen der Spielfigur zeichnen (zur Visualisierung der Blickrichtung)
-  augenZeichnen(x, y, w, h);
+  augenZeichnen(x, y, w, h, f.blickrichtung || "rechts");
+
+  // Name / Kennzeichnung über dem Kopf zeichnen
+  labelZeichnen(x, y, w, istEigenerSpieler ? "Du" : (f.name || "Spieler"), istEigenerSpieler);
 }
 
-// Kleine Augen zur Erkennung der Richtung
-function augenZeichnen(x, y, w, h) {
+// Zeichnet Augen zur Erkennung der Richtung
+function augenZeichnen(x, y, w, h, blickrichtung) {
   ctx.fillStyle = Spieleinstellungen.spieler.augenFarbe;
   const augenRadius = 3;
 
@@ -198,16 +218,16 @@ function augenZeichnen(x, y, w, h) {
   let auge2X = x + w * 0.7;
   let augeY = y + h * 0.35;
 
-  if (spieler.blickrichtung === "links") {
+  if (blickrichtung === "links") {
     auge1X = x + w * 0.2;
     auge2X = x + w * 0.5;
-  } else if (spieler.blickrichtung === "rechts") {
+  } else if (blickrichtung === "rechts") {
     auge1X = x + w * 0.5;
     auge2X = x + w * 0.8;
-  } else if (spieler.blickrichtung === "hoch") {
-    augeY = y + h * 0.25;
-  } else if (spieler.blickrichtung === "runter") {
-    augeY = y + h * 0.5;
+  } else if (blickrichtung === "hoch") {
+    augeY = y + h * 0.22;
+  } else if (blickrichtung === "runter") {
+    augeY = y + h * 0.52;
   }
 
   ctx.beginPath();
@@ -216,7 +236,26 @@ function augenZeichnen(x, y, w, h) {
   ctx.fill();
 }
 
-// 6. Die Haupt-Spielschleife (Game Loop)
+// Zeichnet eine kleine Beschriftung über der Spielfigur
+function labelZeichnen(x, y, w, text, istEigenerSpieler) {
+  ctx.save();
+  ctx.font = "bold 11px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "bottom";
+
+  const labelX = x + w / 2;
+  const labelY = y - 6;
+
+  // Text-Schatten für gute Lesbarkeit
+  ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+  ctx.shadowBlur = 4;
+
+  ctx.fillStyle = istEigenerSpieler ? "#60a5fa" : "#e2e8f0";
+  ctx.fillText(text, labelX, labelY);
+  ctx.restore();
+}
+
+// 6. Haupt-Spielschleife (Game Loop)
 function gameLoop() {
   spielerAktualisieren();
   zeichnen();

@@ -3,21 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ProjektSpiel - 2D Spielwelt</title>
+  <title>ProjektSpiel - Öffentliche 2D-Multiplayer Welt</title>
   <link rel="stylesheet" href="design.css">
 </head>
 <body>
 
   <div class="spiel-container">
-    <!-- Kopfbereich -->
+    <!-- Kopfbereich mit Server- und Spieler-Status -->
     <header class="spiel-header">
       <div class="titel-bereich">
         <h1>🎮 ProjektSpiel</h1>
-        <p class="untertitel">2D-Spielfeld mit Socket.IO Vorbereitung</p>
+        <p class="untertitel">Gemeinsame 2D-Welt (Öffentlich & ohne Anmeldung)</p>
       </div>
-      <div class="status-bereich" id="multiplayer-status">
-        <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
-        <span class="status-text" id="multiplayer-status-text">Verbinde...</span>
+      <div class="header-status-gruppe">
+        <span class="spieler-badge" id="spieler-anzahl">1 Spieler online</span>
+        <div class="status-bereich" id="multiplayer-status">
+          <span class="status-punkt offline" id="multiplayer-status-punkt"></span>
+          <span class="status-text" id="multiplayer-status-text">Verbinde...</span>
+        </div>
       </div>
     </header>
 
@@ -26,7 +29,7 @@
       <canvas id="spielFeld"></canvas>
     </main>
 
-    <!-- Fußbereich mit Steuerungshinweisen und Positionsanzeige -->
+    <!-- Fußbereich mit Steuerung und Positionsanzeige -->
     <footer class="spiel-footer">
       <div class="tasten-info">
         <span class="tasten-label">Steuerung:</span>
@@ -38,7 +41,7 @@
     </footer>
   </div>
 
-  <!-- Socket.IO Client vom Server geladen -->
+  <!-- Socket.IO Client vom Server bereitgestellt -->
   <script src="/socket.io/socket.io.js"></script>
 
   <!-- Module des Spiels -->

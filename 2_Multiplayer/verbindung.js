@@ -1,41 +1,82 @@
-// Vorbereitung der Multiplayer-Verbindung über Socket.IO
+// Multiplayer-Verwaltung über Socket.IO für eine gemeinsame Spielwelt
 
 class MultiplayerVerbindung {
-  constructor() {
+  constructor(callbacks = {}) {
     this.istVerbunden = false;
     this.socket = null;
-    this.letztePosition = { x: 0, y: 0 };
+    this.eigenerSpieler = null;
+    this.andereSpieler = {}; // Map: id -> Spielerobjekt
+    this.letzteGesendeteDaten = { x: null, y: null, blickrichtung: null };
+
+    // Callback-Funktion, um das Hauptspiel über den Start zu benachrichtigen
+    this.onInitialisiert = callbacks.onInitialisiert || null;
+
     this.initialisieren();
   }
 
-  // Stellt die Verbindung zum Socket.IO Server her
+  // Stellt die Verbindung zum Server her und registriert alle Netzwerk-Events
   initialisieren() {
-    // Prüfen, ob die Socket.IO Client-Bibliothek geladen ist
     if (typeof io === "undefined") {
-      console.warn("[Multiplayer] Socket.IO Bibliothek wurde nicht geladen.");
-      this.statusAktualisieren(false, "Kein Socket.IO");
+      console.warn("[Multiplayer] Socket.IO Client nicht verfügbar (Offline-Modus).");
+      this.statusAktualisieren(false, "Offline");
       return;
     }
 
     try {
       this.socket = io();
 
+      // Bei erfolgreicher Serververbindung
       this.socket.on("connect", () => {
         this.istVerbunden = true;
-        console.log(`[Multiplayer] Verbunden mit Server (ID: ${this.socket.id})`);
-        this.statusAktualisieren(true, "Verbunden");
+        console.log(`[Multiplayer] Verbunden mit Server (Socket-ID: ${this.socket.id})`);
+        this.statusAktualisieren(true, "Online");
       });
 
+      // Verbindung verloren
       this.socket.on("disconnect", () => {
         this.istVerbunden = false;
-        console.log("[Multiplayer] Verbindung getrennt.");
+        console.log("[Multiplayer] Verbindung verloren.");
         this.statusAktualisieren(false, "Getrennt");
       });
 
-      // Vorbereitung für Mehrspieler: Position eines anderen Spielers empfangen
+      // 1. Initialisierung: Eigene Figur und bestehende Mitspieler erhalten
+      this.socket.on("spielInitialisieren", (daten) => {
+        this.eigenerSpieler = daten.eigenerSpieler;
+        this.andereSpieler = daten.andereSpieler || {};
+
+        console.log("[Multiplayer] Spiel initialisiert. Bereits online:", Object.keys(this.andereSpieler).length);
+
+        if (typeof this.onInitialisiert === "function") {
+          this.onInitialisiert(this.eigenerSpieler);
+        }
+      });
+
+      // 2. Ein neuer Mitspieler ist der gemeinsamen Welt beigetreten
+      this.socket.on("neuerSpieler", (spieler) => {
+        console.log(`[Multiplayer] Neuer Spieler beigetreten: ${spieler.name}`);
+        this.andereSpieler[spieler.id] = spieler;
+      });
+
+      // 3. Ein Mitspieler hat sich bewegt
       this.socket.on("spielerBewegt", (daten) => {
-        // Hier können später andere Spieler dargestellt werden
-        // console.log("Anderer Spieler bewegt:", daten);
+        if (this.andereSpieler[daten.id]) {
+          this.andereSpieler[daten.id].x = daten.x;
+          this.andereSpieler[daten.id].y = daten.y;
+          this.andereSpieler[daten.id].blickrichtung = daten.blickrichtung;
+        }
+      });
+
+      // 4. Ein Mitspieler hat das Spiel verlassen
+      this.socket.on("spielerVerlassen", (id) => {
+        if (this.andereSpieler[id]) {
+          console.log(`[Multiplayer] Spieler entfernt: ${this.andereSpieler[id].name || id}`);
+          delete this.andereSpieler[id];
+        }
+      });
+
+      // 5. Spieler-Zähler im UI aktualisieren
+      this.socket.on("spielerAnzahlAktualisiert", (anzahl) => {
+        this.spielerAnzahlAktualisieren(anzahl);
       });
 
     } catch (fehler) {
@@ -44,18 +85,27 @@ class MultiplayerVerbindung {
     }
   }
 
-  // Sendet die eigene Position an den Server, wenn sie sich geändert hat
-  sendePosition(x, y) {
+  // Sendet die eigene Position und Blickrichtung an den Server
+  sendeBewegung(x, y, blickrichtung) {
     if (!this.istVerbunden || !this.socket) return;
 
-    // Nur senden, wenn sich die Position tatsächlich geändert hat
-    if (this.letztePosition.x !== x || this.letztePosition.y !== y) {
-      this.letztePosition = { x, y };
-      this.socket.emit("spielerBewegung", { x, y });
+    // Nur senden, wenn sich Koordinaten oder Blickrichtung geändert haben
+    if (
+      this.letzteGesendeteDaten.x !== x ||
+      this.letzteGesendeteDaten.y !== y ||
+      this.letzteGesendeteDaten.blickrichtung !== blickrichtung
+    ) {
+      this.letzteGesendeteDaten = { x, y, blickrichtung };
+      this.socket.emit("spielerBewegung", { x, y, blickrichtung });
     }
   }
 
-  // Aktualisiert die Statusanzeige auf der Webseite
+  // Gibt alle anderen verbundenen Spieler als Array zurück
+  getAndereSpieler() {
+    return Object.values(this.andereSpieler);
+  }
+
+  // Aktualisiert die Verbindungsanzeige im UI
   statusAktualisieren(verbunden, text) {
     const statusText = document.getElementById("multiplayer-status-text");
     const statusPunkt = document.getElementById("multiplayer-status-punkt");
@@ -65,7 +115,15 @@ class MultiplayerVerbindung {
       statusPunkt.className = "status-punkt " + (verbunden ? "online" : "offline");
     }
   }
+
+  // Aktualisiert den Spieler-Zähler im UI
+  spielerAnzahlAktualisieren(anzahl) {
+    const anzahlElement = document.getElementById("spieler-anzahl");
+    if (anzahlElement) {
+      anzahlElement.textContent = `${anzahl} ${anzahl === 1 ? "Spieler" : "Spieler"} online`;
+    }
+  }
 }
 
-// Globale Instanz für das Spiel
+// Globale Instanz
 let multiplayerVerbindung = null;

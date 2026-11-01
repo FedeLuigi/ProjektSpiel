@@ -37,6 +37,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .titel-bereich h1 {
@@ -50,6 +51,24 @@ body {
   font-size: 0.85rem;
   color: #94a3b8;
   margin-top: 2px;
+}
+
+/* Status-Gruppe (Zähler + Verbindung) */
+.header-status-gruppe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spieler-badge {
+  background: #0f172a;
+  border: 1px solid #3b82f6;
+  color: #60a5fa;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Status-Anzeige (Multiplayer) */
