@@ -1,13 +1,11 @@
-// Zombie-Verwaltung und KI auf dem Server
+// Zombie-Verwaltung und KI auf dem Server (pro Raum isoliert)
 const { WELT } = require('../3_Spieleinstellungen/server_einstellungen');
 
-// Zentrale Liste aller lebenden Zombies auf dem Server
-const alleZombies = {};
-let naechsteZombieId = 1;
+// Erzeugt einen neuen Zombie an einer zufälligen Bildschirmkante im angegebenen Raum
+function zombieSpawnen(raum, level) {
+  if (!raum || !raum.zombies) return null;
 
-// Erzeugt einen neuen Zombie an einer zufälligen Bildschirmkante
-function zombieSpawnen(level) {
-  const id = `zombie_${naechsteZombieId++}`;
+  const id = `zombie_${raum.naechsteZombieId++}`;
   const kante = Math.floor(Math.random() * 4);
   let spawnX = 0;
   let spawnY = 0;
@@ -33,7 +31,7 @@ function zombieSpawnen(level) {
   const levelBonusHp = (level - 1) * 5;
   const levelBonusSpeed = Math.min(1.0, (level - 1) * 0.12);
 
-  alleZombies[id] = {
+  const neuerZombie = {
     id: id,
     x: spawnX,
     y: spawnY,
@@ -45,19 +43,23 @@ function zombieSpawnen(level) {
     letzterAngriff: 0
   };
 
-  return alleZombies[id];
+  raum.zombies[id] = neuerZombie;
+  return neuerZombie;
 }
 
-// Führt die Zombie-KI aus: Verfolgt den nächstgelegenen Spieler und greift an
-function zombiesAktualisieren(spielerListe, io, spielerVerwaltung) {
-  const jetzt = Date.now();
+// Führt die Zombie-KI aus: Verfolgt den nächstgelegenen Spieler im Raum und greift an
+function zombiesAktualisieren(raum, io) {
+  if (!raum || !raum.zombies || !raum.spieler) return;
 
-  for (const zId in alleZombies) {
-    const z = alleZombies[zId];
+  const jetzt = Date.now();
+  const spielerListe = Object.values(raum.spieler);
+
+  for (const zId in raum.zombies) {
+    const z = raum.zombies[zId];
     let naechsterSpieler = null;
     let kleinsterAbstand = Infinity;
 
-    // Nächstgelegenen lebenden Spieler suchen
+    // Nächstgelegenen lebenden Spieler im Raum suchen
     for (const p of spielerListe) {
       if (p.hp > 0) {
         const abstand = Math.hypot(p.x - z.x, p.y - z.y);
@@ -76,7 +78,7 @@ function zombiesAktualisieren(spielerListe, io, spielerVerwaltung) {
       z.winkel = Math.atan2(dy, dx);
 
       // Bewegen, wenn noch nicht in Beiß-Reichweite
-      if (distanz > (z.radius + naechsterSpieler.radius - 4)) {
+      if (distanz > (z.radius + (naechsterSpieler.radius || 18) - 4)) {
         z.x += (dx / distanz) * z.geschwindigkeit;
         z.y += (dy / distanz) * z.geschwindigkeit;
       } else {
@@ -85,22 +87,27 @@ function zombiesAktualisieren(spielerListe, io, spielerVerwaltung) {
           z.letzterAngriff = jetzt;
           naechsterSpieler.hp = Math.max(0, naechsterSpieler.hp - 10);
 
-          io.emit('spielerSchaden', {
+          io.to(raum.code).emit('spielerSchaden', {
             spielerId: naechsterSpieler.id,
             hp: naechsterSpieler.hp,
             schaden: 10
           });
 
           // Respawn nach 3 Sekunden, falls Spieler stirbt
-          if (naechsterSpieler.hp <= 0 && spielerVerwaltung) {
+          if (naechsterSpieler.hp <= 0) {
+            const spielerId = naechsterSpieler.id;
             setTimeout(() => {
-              const respawnterSpieler = spielerVerwaltung.spielerWiederbeleben(naechsterSpieler.id, 400, 300);
-              if (respawnterSpieler) {
-                io.emit('spielerRespawn', {
-                  spielerId: respawnterSpieler.id,
-                  hp: respawnterSpieler.hp,
-                  x: respawnterSpieler.x,
-                  y: respawnterSpieler.y
+              if (raum && raum.spieler && raum.spieler[spielerId]) {
+                const s = raum.spieler[spielerId];
+                s.hp = 100;
+                s.x = 400 + Math.round((Math.random() - 0.5) * 80);
+                s.y = 300 + Math.round((Math.random() - 0.5) * 80);
+
+                io.to(raum.code).emit('spielerRespawn', {
+                  spielerId: s.id,
+                  hp: s.hp,
+                  x: s.x,
+                  y: s.y
                 });
               }
             }, 3000);
@@ -111,9 +118,11 @@ function zombiesAktualisieren(spielerListe, io, spielerVerwaltung) {
   }
 }
 
-// Verarbeitet Projektiltreffer auf einen Zombie
-function zombieTreffen(treffer, socketId, io, onZombieBesiegt) {
-  const zombie = alleZombies[treffer.zombieId];
+// Verarbeitet Projektiltreffer auf einen Zombie im angegebenen Raum
+function zombieTreffen(raum, treffer, socketId, io, onZombieBesiegt) {
+  if (!raum || !raum.zombies) return;
+
+  const zombie = raum.zombies[treffer.zombieId];
   if (!zombie) return;
 
   zombie.hp -= (treffer.schaden || 10);
@@ -121,9 +130,9 @@ function zombieTreffen(treffer, socketId, io, onZombieBesiegt) {
   // Zombie besiegt!
   if (zombie.hp <= 0) {
     const toterZombie = { id: zombie.id, x: zombie.x, y: zombie.y };
-    delete alleZombies[treffer.zombieId];
+    delete raum.zombies[treffer.zombieId];
 
-    io.emit('zombieGestorben', {
+    io.to(raum.code).emit('zombieGestorben', {
       zombieId: toterZombie.id,
       x: toterZombie.x,
       y: toterZombie.y,
@@ -135,7 +144,7 @@ function zombieTreffen(treffer, socketId, io, onZombieBesiegt) {
     }
   } else {
     // Zombie verletzt
-    io.emit('zombieVerletzt', {
+    io.to(raum.code).emit('zombieVerletzt', {
       zombieId: zombie.id,
       hp: zombie.hp,
       maxHp: zombie.maxHp,
@@ -145,9 +154,10 @@ function zombieTreffen(treffer, socketId, io, onZombieBesiegt) {
   }
 }
 
-// Gibt ein kompaktes Array aller Zombies für den Netzwerk-Broadcast zurück
-function getZombiesPaket() {
-  return Object.values(alleZombies).map(z => ({
+// Gibt ein kompaktes Array aller Zombies im Raum für den Netzwerk-Broadcast zurück
+function getZombiesPaket(raum) {
+  if (!raum || !raum.zombies) return [];
+  return Object.values(raum.zombies).map(z => ({
     id: z.id,
     x: Math.round(z.x),
     y: Math.round(z.y),
@@ -157,12 +167,9 @@ function getZombiesPaket() {
   }));
 }
 
-function getZombieAnzahl() {
-  return Object.keys(alleZombies).length;
-}
-
-function getAlleZombies() {
-  return alleZombies;
+function getZombieAnzahl(raum) {
+  if (!raum || !raum.zombies) return 0;
+  return Object.keys(raum.zombies).length;
 }
 
 module.exports = {
@@ -170,6 +177,5 @@ module.exports = {
   zombiesAktualisieren,
   zombieTreffen,
   getZombiesPaket,
-  getZombieAnzahl,
-  getAlleZombies
+  getZombieAnzahl
 };

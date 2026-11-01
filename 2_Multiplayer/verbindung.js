@@ -1,4 +1,4 @@
-// Multiplayer-Verwaltung über Socket.IO für eine gemeinsame Spielwelt
+// Multiplayer-Verwaltung über Socket.IO für Spielräume und Lobbys
 
 class MultiplayerVerbindung {
   constructor(callbacks = {}) {
@@ -6,10 +6,22 @@ class MultiplayerVerbindung {
     this.socket = null;
     this.eigenerSpieler = null;
     this.andereSpieler = {}; // Map: id -> Spielerobjekt
-    this.letzteGesendeteDaten = { x: null, y: null, blickrichtung: null };
+    this.aktuellerRaumCode = null;
+    this.aktuelleLobby = null;
+    this.letzteGesendeteDaten = { x: null, y: null, winkel: null, blickrichtung: null };
 
-    // Callback-Funktionen
+    // Callback-Funktionen für Lobby & Räume
+    this.onRaumErstellt = callbacks.onRaumErstellt || null;
+    this.onRaumBeigetreten = callbacks.onRaumBeigetreten || null;
+    this.onLobbyAktualisiert = callbacks.onLobbyAktualisiert || null;
+    this.onSpielGestartet = callbacks.onSpielGestartet || null;
+    this.onRaumFehler = callbacks.onRaumFehler || null;
+    this.onNeuerRaumleiter = callbacks.onNeuerRaumleiter || null;
+
+    // Callback-Funktionen für das Spielgeschehen
     this.onInitialisiert = callbacks.onInitialisiert || null;
+    this.onSpielerBewegt = callbacks.onSpielerBewegt || null;
+    this.onSpielerVerlassen = callbacks.onSpielerVerlassen || null;
     this.onSchussEmpfangen = callbacks.onSchussEmpfangen || null;
     this.onZombiesAktualisiert = callbacks.onZombiesAktualisiert || null;
     this.onZombieGestorben = callbacks.onZombieGestorben || null;
@@ -49,25 +61,78 @@ class MultiplayerVerbindung {
         this.statusAktualisieren(false, "Getrennt");
       });
 
-      // 1. Initialisierung: Eigene Figur und bestehende Mitspieler erhalten
-      this.socket.on("spielInitialisieren", (daten) => {
+      // ==========================================
+      // Lobby- & Raum-Ereignisse
+      // ==========================================
+
+      // Raum erfolgreich erstellt
+      this.socket.on("raumErstellt", (daten) => {
+        this.aktuellerRaumCode = daten.raumCode;
         this.eigenerSpieler = daten.eigenerSpieler;
-        this.andereSpieler = daten.andereSpieler || {};
-
-        console.log("[Multiplayer] Spiel initialisiert. Bereits online:", Object.keys(this.andereSpieler).length);
-
-        if (typeof this.onInitialisiert === "function") {
-          this.onInitialisiert(this.eigenerSpieler);
+        this.aktuelleLobby = daten.lobby;
+        console.log(`[Lobby] Raum erstellt: ${daten.raumCode}`);
+        if (typeof this.onRaumErstellt === "function") {
+          this.onRaumErstellt(daten);
         }
       });
 
-      // 2. Ein neuer Mitspieler ist der gemeinsamen Welt beigetreten
-      this.socket.on("neuerSpieler", (spieler) => {
-        console.log(`[Multiplayer] Neuer Spieler beigetreten: ${spieler.name}`);
-        this.andereSpieler[spieler.id] = spieler;
+      // Raum erfolgreich beigetreten
+      this.socket.on("raumBeigetreten", (daten) => {
+        this.aktuellerRaumCode = daten.raumCode;
+        this.eigenerSpieler = daten.eigenerSpieler;
+        this.aktuelleLobby = daten.lobby;
+        console.log(`[Lobby] Raum beigetreten: ${daten.raumCode}`);
+        if (typeof this.onRaumBeigetreten === "function") {
+          this.onRaumBeigetreten(daten);
+        }
       });
 
-      // 3. Ein Mitspieler hat sich bewegt oder gedreht
+      // Lobby-Daten aktualisiert (Spielerliste, Bereitschaft, Leiter)
+      this.socket.on("lobbyAktualisiert", (lobby) => {
+        this.aktuelleLobby = lobby;
+        console.log(`[Lobby] Aktualisiert (${lobby.spielerAnzahl} Spieler)`);
+        if (typeof this.onLobbyAktualisiert === "function") {
+          this.onLobbyAktualisiert(lobby);
+        }
+      });
+
+      // Fehlermeldung bei Raumaktionen (z.B. falscher Code, nicht alle bereit)
+      this.socket.on("raumFehler", (nachricht) => {
+        console.warn(`[Lobby Fehler] ${nachricht}`);
+        if (typeof this.onRaumFehler === "function") {
+          this.onRaumFehler(nachricht);
+        }
+      });
+
+      // Leiter hat gewechselt
+      this.socket.on("neuerRaumleiter", (daten) => {
+        console.log(`[Lobby] Neuer Raumleiter: ${daten.leiterName}`);
+        if (typeof this.onNeuerRaumleiter === "function") {
+          this.onNeuerRaumleiter(daten);
+        }
+      });
+
+      // ==========================================
+      // Spielstart & In-Game-Ereignisse
+      // ==========================================
+
+      // Startsignal vom Server
+      this.socket.on("spielGestartet", (daten) => {
+        console.log(`[Multiplayer] Runde im Raum ${daten.raumCode} gestartet!`);
+        this.andereSpieler = {};
+        for (const sId in daten.spieler) {
+          if (sId !== this.socket.id) {
+            this.andereSpieler[sId] = daten.spieler[sId];
+          } else {
+            this.eigenerSpieler = daten.spieler[sId];
+          }
+        }
+        if (typeof this.onSpielGestartet === "function") {
+          this.onSpielGestartet(daten);
+        }
+      });
+
+      // Spielerbewegung empfangen
       this.socket.on("spielerBewegt", (daten) => {
         if (this.andereSpieler[daten.id]) {
           this.andereSpieler[daten.id].x = daten.x;
@@ -75,29 +140,30 @@ class MultiplayerVerbindung {
           this.andereSpieler[daten.id].winkel = daten.winkel !== undefined ? daten.winkel : 0;
           this.andereSpieler[daten.id].blickrichtung = daten.blickrichtung;
         }
+        if (typeof this.onSpielerBewegt === "function") {
+          this.onSpielerBewegt(daten);
+        }
       });
 
-      // 4. Ein Mitspieler hat das Spiel verlassen
+      // Spieler hat den Raum verlassen
       this.socket.on("spielerVerlassen", (id) => {
         if (this.andereSpieler[id]) {
           console.log(`[Multiplayer] Spieler entfernt: ${this.andereSpieler[id].name || id}`);
           delete this.andereSpieler[id];
         }
+        if (typeof this.onSpielerVerlassen === "function") {
+          this.onSpielerVerlassen(id);
+        }
       });
 
-      // 5. Spieler-Zähler im UI aktualisieren
-      this.socket.on("spielerAnzahlAktualisiert", (anzahl) => {
-        this.spielerAnzahlAktualisieren(anzahl);
-      });
-
-      // 6. Schuss eines anderen Spielers empfangen
+      // Schuss eines anderen Spielers empfangen
       this.socket.on("schussAbgefeuert", (schussDaten) => {
         if (typeof this.onSchussEmpfangen === "function") {
           this.onSchussEmpfangen(schussDaten);
         }
       });
 
-      // 7. Zombie-Synchronisation (Koop-Kampf)
+      // Zombie-Synchronisation (Koop-Kampf)
       this.socket.on("zombiesAktualisiert", (zombiePaket) => {
         if (typeof this.onZombiesAktualisiert === "function") {
           this.onZombiesAktualisiert(zombiePaket);
@@ -116,7 +182,7 @@ class MultiplayerVerbindung {
         }
       });
 
-      // 8. Spieler-Schaden & Respawn
+      // Spieler-Schaden & Respawn
       this.socket.on("spielerSchaden", (daten) => {
         if (typeof this.onSpielerSchaden === "function") {
           this.onSpielerSchaden(daten);
@@ -129,7 +195,7 @@ class MultiplayerVerbindung {
         }
       });
 
-      // 9. Wellen- & Levelsystem
+      // Wellen- & Levelsystem
       this.socket.on("welleStatus", (daten) => {
         if (typeof this.onWelleStatus === "function") {
           this.onWelleStatus(daten);
@@ -160,11 +226,41 @@ class MultiplayerVerbindung {
     }
   }
 
-  // Sendet die eigene Position und den Zielwinkel an den Server
+  // ==========================================
+  // Methoden zum Senden an den Server
+  // ==========================================
+
+  raumErstellen(spielerName) {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("raumErstellen", { spielerName });
+  }
+
+  raumBeitreten(raumCode, spielerName) {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("raumBeitreten", { raumCode, spielerName });
+  }
+
+  bereitUmschalten() {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("bereitUmschalten");
+  }
+
+  rundeStarten() {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("rundeStarten");
+  }
+
+  raumVerlassen() {
+    if (!this.istVerbunden || !this.socket) return;
+    this.socket.emit("raumVerlassen");
+    this.aktuellerRaumCode = null;
+    this.aktuelleLobby = null;
+    this.andereSpieler = {};
+  }
+
   sendeBewegung(x, y, winkel, blickrichtung = "rechts") {
     if (!this.istVerbunden || !this.socket) return;
 
-    // Nur senden, wenn sich Koordinaten oder Winkel relevant geändert haben
     const winkelGerundet = Math.round(winkel * 100) / 100;
     if (
       this.letzteGesendeteDaten.x !== x ||
@@ -176,24 +272,20 @@ class MultiplayerVerbindung {
     }
   }
 
-  // Sendet einen abgefeuerten Schuss an den Server
   sendeSchuss(schussDaten) {
     if (!this.istVerbunden || !this.socket) return;
     this.socket.emit("schussAbfeuern", schussDaten);
   }
 
-  // Sendet einen Projektiltreffer auf einen Zombie an den Server
   sendeZombieTreffer(zombieId, schaden, trefferX, trefferY) {
     if (!this.istVerbunden || !this.socket) return;
     this.socket.emit("zombieTreffer", { zombieId, schaden, trefferX, trefferY });
   }
 
-  // Gibt alle anderen verbundenen Spieler als Array zurück
   getAndereSpieler() {
     return Object.values(this.andereSpieler);
   }
 
-  // Aktualisiert die Verbindungsanzeige im UI
   statusAktualisieren(verbunden, text) {
     const statusText = document.getElementById("multiplayer-status-text");
     const statusPunkt = document.getElementById("multiplayer-status-punkt");
@@ -201,14 +293,6 @@ class MultiplayerVerbindung {
     if (statusText) statusText.textContent = text;
     if (statusPunkt) {
       statusPunkt.className = "status-punkt " + (verbunden ? "online" : "offline");
-    }
-  }
-
-  // Aktualisiert den Spieler-Zähler im UI
-  spielerAnzahlAktualisieren(anzahl) {
-    const anzahlElement = document.getElementById("spieler-anzahl");
-    if (anzahlElement) {
-      anzahlElement.textContent = `${anzahl} ${anzahl === 1 ? "Spieler" : "Spieler"} online`;
     }
   }
 }

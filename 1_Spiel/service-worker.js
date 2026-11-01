@@ -2,7 +2,7 @@
 // Ermöglicht Offline-Start der Benutzeroberfläche und schnelles Laden
 // WICHTIG: Socket.IO und Multiplayer-Verbindungen werden NIEMALS gecacht!
 
-const CACHE_NAME = 'zombie-koop-v1';
+const CACHE_NAME = 'zombie-koop-v2';
 
 // Statische Dateien für den App-Cache
 const STATISCHE_DATEIEN = [
