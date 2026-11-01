@@ -63,17 +63,17 @@
   <main class="plattform-container">
     <section class="hero-bereich">
       <div class="hero-text">
-        <h2>Willkommen in der SPIELBOX 🕹️</h2>
-        <p>
+        <h2 class="hero-titel">Willkommen in der SPIELBOX 🕹️</h2>
+        <p class="hero-beschreibung">
           Wähle dein Spiel, starte eigene Multiplayer-Räume oder tritt deinen Freunden per Einladungscode bei. 
           Voll optimiert für PC und Smartphones!
         </p>
       </div>
 
-      <!-- Schnell-Beitritt Widget -->
-      <div class="schnell-beitritt-kasten">
-        <h3>🔑 Raumcode beitreten</h3>
-        <p class="zeile-sub">Hast du einen 5-stelligen Code für Zombie Koop?</p>
+      <!-- Schnell-Beitritt (Offen im Layout integriert, ohne verschachtelte Box) -->
+      <div class="schnell-beitritt-bereich">
+        <h3 class="schnell-beitritt-titel">🔑 Raumcode beitreten</h3>
+        <p class="schnell-beitritt-sub">5-stelligen Code eingeben und direkt starten</p>
         <div class="code-eingabe-gruppe">
           <input type="text" id="schnell-code-input" class="code-input-feld" placeholder="CODE" maxlength="5" autocomplete="off" autocapitalize="characters">
           <button id="schnell-beitritt-btn" class="code-beitritt-btn">Beitreten</button>
@@ -86,10 +86,11 @@
          ======================================================== -->
     <section class="katalog-bereich">
       <div class="katalog-kopf">
-        <h2>
-          <span>Verfügbare Spiele</span>
-          <span class="katalog-status-badge" id="katalog-zaehler">1 Spiel bereit</span>
-        </h2>
+        <div>
+          <h2 class="katalog-titel">Verfügbare Spiele</h2>
+          <p class="katalog-sub">Wähle ein Spiel und spiele direkt im Browser mit deinen Freunden.</p>
+        </div>
+        <span class="katalog-status-text" id="katalog-zaehler">1 Spiel bereit</span>
       </div>
 
       <!-- Dynamisch durch spiele_katalog.js befüllt -->

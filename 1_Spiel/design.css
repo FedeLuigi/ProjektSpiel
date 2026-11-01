@@ -643,99 +643,73 @@ kbd {
   box-sizing: border-box;
 }
 
-/* Koop-Briefing Karte (Linke Spalte) */
+/* ========================================================
+   OFFENES KOOP-BRIEFING & HAUPTMENÜ (Keine Boxen & Rahmen)
+   ======================================================== */
+.hauptmenue-intro,
 .spiel-briefing-kasten {
-  background: rgba(18, 25, 41, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 24px 26px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  gap: 12px;
   box-sizing: border-box;
 }
 
-.briefing-icon-zeile {
+.hauptmenue-titel,
+.briefing-titel {
+  font-size: 1.85rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+.hauptmenue-beschreibung,
+.briefing-text {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  line-height: 1.55;
+  max-width: 440px;
+}
+
+.hauptmenue-features-zeile {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.briefing-icon {
-  font-size: 2.2rem;
-  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4));
-}
-
-.briefing-badge {
-  background: rgba(16, 185, 129, 0.18);
-  border: 1px solid rgba(16, 185, 129, 0.5);
-  color: #a7f3d0;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.briefing-titel {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #ffffff;
-  line-height: 1.25;
-}
-
-.briefing-text {
-  font-size: 0.9rem;
-  color: #94a3b8;
-  line-height: 1.5;
-}
-
-.briefing-features {
-  display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 6px;
-}
-
-.feature-tag {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.76rem;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: #a7f3d0;
   font-weight: 600;
 }
 
-/* Auswahl-Karten im einheitlichen SPIELBOX-Design (Rechte Spalte) */
+.feature-punkt {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* Auswahl-Schaltflächen (Schlank, modern, keine Box-in-Box) */
 .plattform-auswahl-karte {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 20px 24px;
-  border-radius: 16px;
-  background: rgba(18, 25, 41, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
   transition: all 0.22s ease;
   position: relative;
-  overflow: hidden;
-  min-height: 90px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   width: 100%;
   box-sizing: border-box;
 }
 
 .plattform-auswahl-karte:hover {
-  background: rgba(26, 36, 60, 0.9);
-  transform: translateY(-3px);
+  background: rgba(26, 36, 60, 0.85);
+  transform: translateY(-2px);
 }
 
 .plattform-auswahl-karte.gruen {
@@ -745,7 +719,7 @@ kbd {
 .plattform-auswahl-karte.gruen:hover,
 .plattform-auswahl-karte.gruen:active {
   border-color: #10b981;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 24px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
 }
 
 .plattform-auswahl-karte.blau {
@@ -755,84 +729,59 @@ kbd {
 .plattform-auswahl-karte.blau:hover,
 .plattform-auswahl-karte.blau:active {
   border-color: #06b6d4;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 24px rgba(6, 182, 212, 0.25);
+  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.25);
 }
 
+.auswahl-icon,
 .kachel-icon-kasten {
-  font-size: 2rem;
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 1.85rem;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
+.auswahl-texte,
 .kachel-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
-.kachel-titel-zeile {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
+.auswahl-titel,
 .kachel-ueberschrift {
   font-size: 1.15rem;
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
-.kachel-badge {
-  font-size: 0.7rem;
-  font-weight: 800;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  text-transform: uppercase;
-}
-
-.kachel-badge.gruen {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-}
-
-.kachel-badge.blau {
-  background: rgba(6, 182, 212, 0.2);
-  color: #38bdf8;
-  border: 1px solid rgba(6, 182, 212, 0.4);
-}
-
+.auswahl-sub,
 .kachel-beschreibung {
   font-size: 0.82rem;
   color: #94a3b8;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
+.auswahl-pfeil,
 .kachel-pfeil {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #94a3b8;
   transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
 }
 
+.plattform-auswahl-karte:hover .auswahl-pfeil,
 .plattform-auswahl-karte:hover .kachel-pfeil {
   transform: translateX(4px);
   color: #ffffff;
 }
 
 /* ========================================================
-   2. & 3. SEITENANSICHTEN: ERSTELLEN & BEITRETEN
+   2. & 3. SEITENANSICHTEN: ERSTELLEN & BEITRETEN (Offen)
    ======================================================== */
 
 .zentrierter-seiten-inhalt {
@@ -840,40 +789,54 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 16px;
 }
 
+.offener-seiten-bereich,
 .briefing-karte {
-  max-width: 520px;
+  max-width: 480px;
   width: 100%;
-  background: rgba(18, 25, 41, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(6, 182, 212, 0.35);
-  border-radius: 16px;
-  padding: 24px 26px;
+  padding: 16px;
   text-align: center;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+.bereich-symbol,
 .briefing-symbol {
-  font-size: 2.6rem;
+  font-size: 2.8rem;
   margin-bottom: 6px;
+  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.2));
 }
 
+.bereich-titel,
 .briefing-karte h2 {
-  font-size: 1.35rem;
+  font-size: 1.55rem;
   font-weight: 800;
-  color: #f1f5f9;
+  color: #f8fafc;
   margin-bottom: 8px;
 }
 
+.bereich-beschreibung,
 .briefing-text {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: #94a3b8;
-  line-height: 1.45;
-  margin-bottom: 16px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  max-width: 420px;
+}
+
+.bereich-spieler-hinweis {
+  font-size: 0.95rem;
+  color: #cbd5e1;
+  margin-bottom: 24px;
+}
+
+.akzent-text {
+  color: #38bdf8;
+  font-weight: 800;
 }
 
 .briefing-status-feld {
@@ -1027,36 +990,35 @@ kbd {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(245, 158, 11, 0.5);
-  padding: 6px 12px;
-  border-radius: 14px;
+  gap: 10px;
+  padding: 4px 6px;
   box-sizing: border-box;
   max-width: 100%;
 }
 
 .lobby-code-label {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 800;
   color: #fbbf24;
+  letter-spacing: 1px;
 }
 
 .lobby-code-wert {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 900;
-  letter-spacing: 2px;
+  letter-spacing: 2.5px;
   color: #ffffff;
   font-family: monospace;
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
 }
 
 .lobby-mini-btn {
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #e2e8f0;
-  padding: 5px 10px;
+  padding: 6px 12px;
   border-radius: 8px;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1064,7 +1026,7 @@ kbd {
 
 .lobby-mini-btn:hover,
 .lobby-mini-btn:active {
-  background: rgba(56, 189, 248, 0.25);
+  background: rgba(56, 189, 248, 0.2);
   border-color: #38bdf8;
   color: #38bdf8;
 }
@@ -1837,11 +1799,14 @@ kbd {
 }
 
 .anleitung-kategorie {
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 14px 16px;
+  padding: 12px 0;
   margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.anleitung-kategorie:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .anleitung-kategorie h4 {

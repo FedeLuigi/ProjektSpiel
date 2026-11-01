@@ -214,66 +214,82 @@ html, body {
   width: 100%;
 }
 
-/* HERO SECTION */
+/* ========================================================
+   HAUPTBEREICH & HERO (Offenes Design ohne schwere Boxen)
+   ======================================================== */
+.plattform-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px max(20px, env(safe-area-inset-right)) max(48px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* OFFENER HERO-BEREICH (Kein dicker Rahmen, keine verschachtelten Karten) */
 .hero-bereich {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(15, 23, 42, 0.8));
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: var(--radius-gross);
-  padding: 28px 32px;
-  margin-bottom: 32px;
-  box-shadow: var(--schatten-kasten), 0 0 40px rgba(16, 185, 129, 0.08);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 28px;
+  padding-bottom: 32px;
+  margin-bottom: 36px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   width: 100%;
 }
 
 .hero-text {
-  flex: 1 1 320px;
+  flex: 1 1 360px;
   min-width: 0;
 }
 
-.hero-text h2 {
-  font-size: 1.85rem;
-  font-weight: 800;
-  margin-bottom: 8px;
+.hero-titel {
+  font-size: 2.15rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #ffffff 40%, #a7f3d0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.hero-text p {
+.hero-beschreibung {
   color: var(--text-gedimmt);
   font-size: 1.05rem;
-  max-width: 600px;
+  line-height: 1.6;
+  max-width: 620px;
 }
 
+/* Offener Schnell-Beitritt Bereich */
+.schnell-beitritt-bereich,
 .schnell-beitritt-kasten {
-  background: rgba(11, 15, 26, 0.9);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  padding: 18px 20px;
-  border-radius: var(--radius-mittel);
-  width: 100%;
-  max-width: 360px;
+  flex: 0 1 360px;
+  min-width: 280px;
   box-sizing: border-box;
-  flex-shrink: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.schnell-beitritt-kasten h3 {
-  font-size: 0.95rem;
+.schnell-beitritt-titel {
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--text-haupt);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.schnell-beitritt-sub {
+  font-size: 0.82rem;
+  color: var(--text-gedimmt);
+  margin-bottom: 12px;
 }
 
 .code-eingabe-gruppe {
   display: flex;
   align-items: stretch;
   gap: 8px;
-  margin-top: 10px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -282,15 +298,15 @@ html, body {
   flex: 1 1 0%;
   min-width: 0;
   width: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid var(--border-farbe);
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
   font-family: monospace;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   text-transform: uppercase;
   font-weight: 800;
   letter-spacing: 2.5px;
-  padding: 10px 12px;
+  padding: 11px 14px;
   border-radius: var(--radius-klein);
   text-align: center;
   outline: none;
@@ -300,7 +316,8 @@ html, body {
 
 .code-input-feld:focus {
   border-color: var(--akzent-gruen);
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+  background: rgba(15, 23, 42, 0.95);
 }
 
 .code-beitritt-btn {
@@ -311,7 +328,7 @@ html, body {
   border: none;
   font-weight: 800;
   font-size: 0.95rem;
-  padding: 10px 18px;
+  padding: 11px 20px;
   border-radius: var(--radius-klein);
   cursor: pointer;
   box-sizing: border-box;
@@ -325,29 +342,35 @@ html, body {
 }
 
 /* ========================================================
-   SPIELE-KATALOG (GRID)
+   SPIELE-KATALOG (Offene Header-Typografie)
    ======================================================== */
 .katalog-kopf {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
-.katalog-kopf h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.katalog-titel {
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-haupt);
+  margin-bottom: 4px;
 }
 
-.katalog-status-badge {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 4px 10px;
-  border-radius: 9999px;
-  font-size: 0.8rem;
+.katalog-sub {
+  font-size: 0.9rem;
   color: var(--text-gedimmt);
+}
+
+.katalog-status-text,
+.katalog-status-badge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--akzent-gruen);
+  white-space: nowrap;
 }
 
 .spiele-raster {
@@ -740,10 +763,12 @@ input:checked + .schieber:before {
   .hero-bereich {
     flex-direction: column;
     align-items: stretch;
-    padding: 22px 18px;
-    gap: 18px;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+    gap: 20px;
   }
 
+  .schnell-beitritt-bereich,
   .schnell-beitritt-kasten {
     max-width: 100%;
   }
@@ -765,16 +790,18 @@ input:checked + .schieber:before {
   }
 
   .hero-bereich {
-    padding: 16px 20px;
+    padding-bottom: 16px;
     margin-bottom: 20px;
-    gap: 14px;
+    gap: 16px;
   }
 
+  .hero-titel,
   .hero-text h2 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     margin-bottom: 4px;
   }
 
+  .hero-beschreibung,
   .hero-text p {
     font-size: 0.9rem;
   }

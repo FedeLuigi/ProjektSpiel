@@ -55,57 +55,50 @@
     </header>
 
     <div class="hauptmenue-koerper">
-      <!-- Linke Spalte: Koop-Briefing & Profilstatus -->
+      <!-- Linke Spalte: Offenes Koop-Briefing (keine geschlossene Karte) -->
       <section class="menue-spalte links">
-        <div class="spiel-briefing-kasten">
-          <div class="briefing-icon-zeile">
-            <span class="briefing-icon">🧟</span>
-            <span class="briefing-badge">1 – 6 Spieler Koop</span>
-          </div>
-          <h2 class="briefing-titel">Überlebe die Horden</h2>
-          <p class="briefing-text">
-            Kämpfe gemeinsam mit deinen Mitspielern gegen endlose Zombie-Wellen. 
-            Teile deinen Einladungscode oder tritt einer offenen Runde bei!
+        <div class="hauptmenue-intro">
+          <h2 class="hauptmenue-titel">Überlebe die Zombie-Horden 🧟</h2>
+          <p class="hauptmenue-beschreibung">
+            Kämpfe gemeinsam mit deinen Freunden gegen endlose Wellen. Eröffne direkt einen neuen Spielraum oder tritt per Einladungscode bei.
           </p>
-          <div class="briefing-features">
-            <span class="feature-tag">⚡ Echtzeit-Multiplayer</span>
-            <span class="feature-tag">🛡️ 2s Respawn-Schutz</span>
-            <span class="feature-tag">📱 PC & Smartphone</span>
+          <div class="hauptmenue-features-zeile">
+            <span>👥 1 – 6 Spieler</span>
+            <span class="feature-punkt">•</span>
+            <span>⚡ Echtzeit-Koop</span>
+            <span class="feature-punkt">•</span>
+            <span>🛡️ 2s Schutz</span>
+            <span class="feature-punkt">•</span>
+            <span>📱 Mobile & PC</span>
           </div>
         </div>
       </section>
 
-      <!-- Rechte Spalte: Spielmodi im einheitlichen SPIELBOX-Design -->
+      <!-- Rechte Spalte: Offene, moderne Spielmodus-Schaltflächen -->
       <section class="menue-spalte rechts">
         <button id="nav-raum-erstellen-btn" class="plattform-auswahl-karte gruen">
-          <div class="kachel-icon-kasten">➕</div>
-          <div class="kachel-info">
-            <div class="kachel-titel-zeile">
-              <span class="kachel-ueberschrift">Spielraum erstellen</span>
-              <span class="kachel-badge gruen">👑 Sofort-Start</span>
-            </div>
-            <span class="kachel-beschreibung">Eröffne direkt eine neue Multiplayer-Lobby als Raumleiter und lade Freunde ein.</span>
+          <span class="auswahl-icon">➕</span>
+          <div class="auswahl-texte">
+            <span class="auswahl-titel">Spielraum erstellen</span>
+            <span class="auswahl-sub">Sofort neue Multiplayer-Lobby eröffnen & Freunde einladen</span>
           </div>
-          <div class="kachel-pfeil">➔</div>
+          <span class="auswahl-pfeil">➔</span>
         </button>
 
         <button id="nav-raum-beitreten-btn" class="plattform-auswahl-karte blau">
-          <div class="kachel-icon-kasten">🚪</div>
-          <div class="kachel-info">
-            <div class="kachel-titel-zeile">
-              <span class="kachel-ueberschrift">Spielraum beitreten</span>
-              <span class="kachel-badge blau">🔑 Code</span>
-            </div>
-            <span class="kachel-beschreibung">Tritt einer bestehenden Runde deiner Mitspieler mit dem 5-stelligen Einladungscode bei.</span>
+          <span class="auswahl-icon">🚪</span>
+          <div class="auswahl-texte">
+            <span class="auswahl-titel">Spielraum beitreten</span>
+            <span class="auswahl-sub">Mit 5-stelligem Einladungscode einer Runde beitreten</span>
           </div>
-          <div class="kachel-pfeil">➔</div>
+          <span class="auswahl-pfeil">➔</span>
         </button>
       </section>
     </div>
   </main>
 
   <!-- ========================================================
-       2. SEITENANSICHT: SPIELRAUM ERSTELLEN (100% Bildschirm)
+       2. SEITENANSICHT: SPIELRAUM ERSTELLEN (Offen, 100% Bildschirm)
        ======================================================== -->
   <main id="ansicht-raum-erstellen" class="vollbild-seite versteckt">
     <header class="seite-kopfzeile">
@@ -118,18 +111,17 @@
     </header>
 
     <div class="zentrierter-seiten-inhalt">
-      <div class="briefing-karte">
-        <div class="briefing-symbol">👑</div>
-        <h2>Du startest als Raumleiter</h2>
-        <p class="briefing-text">
+      <div class="offener-seiten-bereich">
+        <div class="bereich-symbol">👑</div>
+        <h2 class="bereich-titel">Du startest als Raumleiter</h2>
+        <p class="bereich-beschreibung">
           Nach dem Erstellen erhältst du einen eindeutigen <strong>5-stelligen Einladungscode</strong> sowie einen 
-          <strong>Einladungslink</strong>, den du direkt an deine Mitspieler weitergeben kannst.
+          <strong>Einladungslink</strong> zum Weitergeben an deine Mitspieler.
         </p>
 
-        <div class="briefing-status-feld">
-          <span class="status-bezeichnung">Dein Name im Raum:</span>
-          <span class="status-wert" id="erstellen-spieler-name-vorschau">Überlebender</span>
-        </div>
+        <p class="bereich-spieler-hinweis">
+          Dein Funkname: <strong id="erstellen-spieler-name-vorschau" class="akzent-text">Überlebender</strong>
+        </p>
 
         <div class="seiten-aktions-leiste">
           <button id="raum-erstellen-ausfuehren-btn" class="haupt-aktions-btn gruen">
@@ -144,7 +136,7 @@
   </main>
 
   <!-- ========================================================
-       3. SEITENANSICHT: SPIELRAUM BEITRETEN (100% Bildschirm)
+       3. SEITENANSICHT: SPIELRAUM BEITRETEN (Offen, 100% Bildschirm)
        ======================================================== -->
   <main id="ansicht-raum-beitreten" class="vollbild-seite versteckt">
     <header class="seite-kopfzeile">
@@ -157,10 +149,10 @@
     </header>
 
     <div class="zentrierter-seiten-inhalt">
-      <div class="briefing-karte">
-        <div class="briefing-symbol">🔑</div>
-        <h2>Einladungscode eingeben</h2>
-        <p class="briefing-text">
+      <div class="offener-seiten-bereich">
+        <div class="bereich-symbol">🔑</div>
+        <h2 class="bereich-titel">Einladungscode eingeben</h2>
+        <p class="bereich-beschreibung">
           Gib den 5-stelligen Raumcode ein, den du vom Raumleiter erhalten hast:
         </p>
 
@@ -321,15 +313,19 @@
             <h3>Aktueller Spielraum</h3>
             <p class="sektion-beschreibung">Hier kannst du deine Raumdetails einsehen oder den aktuellen Spielraum verlassen.</p>
             
-            <div class="einstellung-info-karten">
-              <div class="einstellung-info-feld">
-                <span class="info-label">Raumcode:</span>
-                <span class="info-wert" id="einstellungen-raumcode-wert">-----</span>
+            <div class="einstellung-zeile">
+              <div class="zeile-info">
+                <span class="zeile-titel">Raumcode</span>
+                <span class="zeile-sub">Aktiver 5-stelliger Einladungscode</span>
               </div>
-              <div class="einstellung-info-feld">
-                <span class="info-label">Status:</span>
-                <span class="info-wert gruen">Im Gefecht</span>
+              <span class="info-wert" id="einstellungen-raumcode-wert">-----</span>
+            </div>
+            <div class="einstellung-zeile">
+              <div class="zeile-info">
+                <span class="zeile-titel">Status</span>
+                <span class="zeile-sub">Spielrunden-Zustand</span>
               </div>
+              <span class="info-wert gruen">Im Gefecht</span>
             </div>
 
             <div class="sektion-trenner"></div>
