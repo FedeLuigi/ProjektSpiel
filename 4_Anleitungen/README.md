@@ -58,22 +58,27 @@ Gehe auf: 👉 **[http://localhost:3000](http://localhost:3000)**
 ```text
 ProjektSpiel/
 │
-├── 1_Spiel/                     # Spielfeld, Layout und Spiellogik
-│   ├── spiel.html               # Webseite & Canvas
-│   ├── design.css               # Modernes Dark-Theme
-│   └── spiel.js                 # 2D-Rendering aller Figuren & Game Loop
+├── 1_Spiel/                           # Spielfeld, Layout und Spiellogik
+│   ├── spiel.html                     # Webseite & Canvas
+│   ├── design.css                     # Modernes Dark-Theme & Touch-Styles
+│   ├── spiel.js                       # 2D-Rendering, Touch/PC-Steuerung & Client-Loop
+│   ├── wellen_verwaltung.js           # Server: Wellen-, Level- und Rundensystem
+│   └── zombie_verwaltung.js           # Server: Zombie-KI, Spawns & Treffer-Kollision
 │
-├── 2_Multiplayer/               # Netzwerk-Modul
-│   └── verbindung.js            # Socket.IO Client (Synchronisation & Events)
+├── 2_Multiplayer/                     # Netzwerk & Spieler
+│   ├── verbindung.js                  # Client: Socket.IO Event-Synchronisation
+│   └── spieler_verwaltung.js          # Server: Verwaltung aller verbundenen Spieler
 │
-├── 3_Spieleinstellungen/        # Konfiguration
-│   └── einstellungen.js         # Weltmaße, Farben & Tempo
+├── 3_Spieleinstellungen/              # Konfiguration
+│   ├── einstellungen.js               # Client: Spieleinstellungen (Radien, Farben, Tempo)
+│   └── server_einstellungen.js        # Server: Ports, Farben & Wellen-Parameter
 │
-├── 4_Anleitungen/               # Dokumentation
-│   └── README.md                # Diese Anleitung
+├── 4_Anleitungen/                     # Dokumentation
+│   └── README.md                      # Diese Anleitung
 │
-├── server_starten.js            # Node.js Server mit Express & Socket.IO
-└── package.json                 # Node.js Projektkonfiguration
+├── server_starten.js                  # Schlanker Haupteinstiegspunkt (verbindet alle Module)
+├── manifest.json                      # PWA-Manifest für iOS/Android Vollbild
+└── package.json                       # Node.js Projektkonfiguration
 ```
 
 ---
